@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Spring Boot에서 logging.level.root 값을 가져옵니다. 기본값은 INFO -->
+    <springProperty scope="context" name="LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+
+    <!-- 1. 표준 JSON 콘솔 Appender (개발 환경용) -->
+    <appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator"/>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <level>level</level>
+                <thread>thread</thread>
+                <logger>class</logger>
+                <message>message</message>
+                <context>context</context>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+            <includeMdc>true</includeMdc>
+            <customFields>{"service":"artbite-app"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- 2. 보안 로그 파일 Appender -->
+    <appender name="SECURITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 로그 파일 경로: 프로젝트 루트의 logs 디렉토리 -->
+        <file>logs/security.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/security-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory> <!-- 30일치 로그 보관 -->
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <level>level</level>
+                <thread>thread</thread>
+                <logger>class</logger>
+                <message>message</message>
+                <context>context</context>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+            <includeMdc>true</includeMdc>
+            <customFields>{"service":"artbite-app", "logType":"security"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- 3. 일반 애플리케이션 로그 파일 Appender (운영 환경용) -->
+    <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 로그 파일 경로: 프로젝트 루트의 logs 디렉토리 -->
+        <file>logs/application.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/application-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <level>level</level>
+                <thread>thread</thread>
+                <logger>class</logger>
+                <message>message</message>
+                <context>context</context>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+            <includeMdc>true</includeMdc>
+            <customFields>{"service":"artbite-app", "logType":"application"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- 로거 설정 -->
+    <!-- 보안 관련 로거 -->
+    <logger name="securityLogger" level="INFO" additivity="false">
+        <appender-ref ref="SECURITY_FILE"/>
+        <!-- 개발 환경에서는 콘솔에도 출력 -->
+        <appender-ref ref="STDOUT_JSON"/>
+    </logger>
+
+    <!-- 루트 로거: 기본적으로 모든 로그를 처리 -->
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="STDOUT_JSON"/>
+        <appender-ref ref="APP_FILE"/>
+    </root>
+
+    <!-- 인증 서비스 로거 -->
+    <logger name="com.okebari.artbite.auth.service" level="INFO" additivity="false">
+        <appender-ref ref="SECURITY_FILE"/>
+        <appender-ref ref="STDOUT_JSON"/>
+    </logger>
+
+    <!-- Spring Profile에 따른 설정 (예시: application-dev.yml, application-prod.yml) -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="APP_FILE"/>
+            <appender-ref ref="SECURITY_FILE"/>
+        </root>
+    </springProfile>
+</configuration>

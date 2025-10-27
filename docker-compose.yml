@@ -1,0 +1,46 @@
+services:
+  app:
+    image: ${DOCKER_IMAGE}
+    container_name: artbite-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DATABASE_PLATFORM}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TOKEN_EXPIRE_TIME: ${JWT_ACCESS_TOKEN_EXPIRE_TIME}
+      JWT_REFRESH_TOKEN_EXPIRE_TIME: ${JWT_REFRESH_TOKEN_EXPIRE_TIME}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      CORS_URL: ${CORS_URL}
+    depends_on:
+      artbite-postgres:
+        condition: service_healthy
+      artbite-redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - artbite-net
+      - elk-net # Add this line
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  artbite-net:
+    external: true
+  elk-net: # Add this network definition
+    external: true
+
+volumes:
+  esdata:

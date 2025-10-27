@@ -1,0 +1,20 @@
+security:
+  whitelisted-paths: /h2-console/**, /api/auth/**, /health/redis
+cors:
+  allowed-origins: ${CORS_URL:-http://localhost:3000}
+
+jwt:
+  secret: ${JWT_SECRET_KEY:-c2VjcmV0S2V5Rm9yTG9jYWxBcHBsaWNhdGlvbjEyMw==} # 로컬 개발용 기본값
+
+spring:
+  h2:
+    console:
+      path: /h2-console
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+
+
+

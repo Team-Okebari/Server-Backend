@@ -1,0 +1,22 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+security:
+  whitelisted-paths: /api/auth/**
+
+cors:
+  allowed-origins: http://localhost:3000
+
+jwt:
+  secret: dGVzdHNlY3JldGtleWZvcmFydGJpdGVwcm9qZWN0dGVzdHNlY3JldGkeyWZvcmFydGJpdGVwcm9qZWN0Cg==
+  access-token-expire-time: 1800000
+  refresh-token-expire-time: 1209600000

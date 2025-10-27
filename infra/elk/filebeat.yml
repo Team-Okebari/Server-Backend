@@ -1,0 +1,34 @@
+filebeat.inputs:
+  - type: filestream
+    id: artbite-application-logs
+    enabled: true
+    paths:
+      - /usr/share/filebeat/logs/application.log
+      - /usr/share/filebeat/logs/security.log
+    fields:
+      service: artbite-app
+    processors:
+      - add_fields:
+          target: ''
+          fields:
+            logType: application
+          when:
+            contains:
+              log.file.path: "application.log"
+      - add_fields:
+          target: ''
+          fields:
+            logType: security
+          when:
+            contains:
+              log.file.path: "security.log"
+
+output.logstash:
+  hosts: [ "logstash:5044" ]
+  loadbalance: true
+  worker: 1
+  timeout: 15
+
+logging.level: info
+logging.to_files: false
+logging.to_stderr: true

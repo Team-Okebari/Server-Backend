@@ -1,0 +1,19 @@
+# Production Profile
+spring:
+  jpa:
+    hibernate:
+      # 운영 환경에서는 스키마 검증을 사용합니다.
+      ddl-auto: validate
+    # 데이터베이스 플랫폼은 운영 환경에 맞춰 지정합니다.
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.PostgreSQLDialect}
+
+# 운영 환경에서는 필수적인 인증/인가 경로 외에는 화이트리스트를 최소화합니다.
+security:
+  whitelisted-paths: /api/auth/**
+
+cors:
+  allowed-origins: ${CORS_URL}
+
+jwt:
+  access-token-expire-time: ${JWT_ACCESS_TOKEN_EXPIRE_TIME}
+  refresh-token-expire-time: ${JWT_REFRESH_TOKEN_EXPIRE_TIME}
