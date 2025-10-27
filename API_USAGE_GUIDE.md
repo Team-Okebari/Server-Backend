@@ -73,7 +73,7 @@ Artbite API는 JWT(JSON Web Token) 기반의 인증 방식을 사용합니다. A
 
 ### 2.4. 토큰 재발급 (Token Reissue)
 
-`accessToken`이 만료되었을 때, HTTP-only 쿠키에 저장된 `refreshToken`을 사용하여 새로운 `accessToken`과 `refreshToken`을 발급받을 수 있습니다.
+`accessToken`이 만료되었을 때, HTTP-only 쿠키에 저장된 `refreshToken`을 사용하여 새로운 `accessToken`과 `refreshToken`을 발급받을 수 있습니다. 이 과정에서 **Refresh Token Rotation**이 적용되어, 기존 `refreshToken`은 무효화되고 새로운 `refreshToken`이 발급됩니다.
 
 *   **엔드포인트:** `POST /api/auth/reissue`
 *   **요청 바디 (JSON):**
@@ -124,6 +124,11 @@ Artbite API는 JWT(JSON Web Token) 기반의 인증 방식을 사용합니다. A
     ```
     Set-Cookie: refreshToken=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:10 GMT; Path=/; Secure; HttpOnly
     ```
+
+### 2.6. 토큰 무효화 (Token Invalidation)
+
+보안 강화를 위해, 사용자의 비밀번호 변경과 같은 중요한 보안 이벤트 발생 시 해당 사용자의 모든 기존 Refresh Token이 자동으로 무효화됩니다. 이 경우, 기존 Refresh Token을 사용한 재발급 요청은 실패하게 됩니다. 이는 탈취된 토큰의 위험을 최소화하기 위한 조치입니다.
+
 
 ## 3. API 문서 (Swagger UI)
 

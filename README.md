@@ -14,6 +14,7 @@ Artbite는 디자이너를 위한 영감 및 레퍼런스 관리 플랫폼의 �
 -   **인증/권한**: Spring Security, JWT (JSON Web Token)
 -   **ORM**: Spring Data JPA, Hibernate
 -   **빌드 도구**: Gradle
+-   **테스트**: JUnit 5, Mockito, Testcontainers
 -   **유틸리티**: Lombok
 
 ### 개발 환경
@@ -45,45 +46,39 @@ cp .env-example .env
 -   `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB_URL`: PostgreSQL 연결 정보
 -   `JWT_SECRET_KEY`: JWT 토큰 서명에 사용될 Base64 인코딩된 비밀 키 (예: `openssl rand -base64 32`로 생성)
 
-### 4. Docker 환경 시작 (PostgreSQL, Redis)
-PostgreSQL 및 Redis 컨테이너를 시작합니다.
+### 4. Docker 환경 시작 (PostgreSQL, Redis, Spring Boot 애플리케이션)
+PostgreSQL, Redis 및 Spring Boot 애플리케이션 컨테이너를 시작합니다.
 ```bash
 ./infra/scripts/start.sh
 ```
 
-### 5. 애플리케이션 실행
+### 5. 애플리케이션 실행 (선택 사항: Docker 없이 로컬에서 실행)
+Docker 컨테이너를 사용하지 않고 로컬에서 Spring Boot 애플리케이션만 실행하려면 다음 명령어를 사용합니다.
 ```bash
 ./gradlew bootRun
 ```
-또는 Docker 컨테이너 내에서 실행하려면 `start.sh` 스크립트가 이미 애플리케이션 컨테이너를 시작합니다.
+
+### 6. Docker 리소스 정리
+불필요한 Docker 빌드 캐시 및 사용하지 않는 빌더 데이터를 정리하여 디스크 공간을 확보합니다.
+```bash
+docker builder prune -f
+```
 
 ## Docker 환경 설정 및 실행
 
 ### 1. Docker Compose 파일
 -   **`infra/database/docker-compose.yml`**: PostgreSQL 및 Redis 서비스를 정의합니다.
 -   **`docker-compose.yml` (루트)**: Spring Boot 애플리케이션 서비스를 정의하고, `infra/database`의 서비스들과 연동합니다.
+-   **`infra/elk/docker-compose.yml`**: Elasticsearch, Logstash, Kibana 및 Filebeat 서비스를 정의합니다.
 
 ### 2. Docker 환경 시작
+모든 인프라 서비스(DB, Redis, ELK)와 Spring Boot 애플리케이션을 시작합니다.
 ```bash
 ./infra/scripts/start.sh
 ```
 
 ### 3. Docker 환경 중지
+모든 인프라 서비스와 Spring Boot 애플리케이션을 중지합니다.
 ```bash
 ./infra/scripts/stop.sh
 ```
-
-## 테스트
-
-### 1. 테스트 실행
-```bash
-./gradlew test
-```
-
-### 2. 테스트 환경 설정
-`src/test/resources/application-test.yml` 파일에서 테스트 전용 H2 데이터베이스 및 기타 설정을 관리합니다.
-
-## 주요 API 엔드포인트
-
--   **회원가입**: `POST /api/auth/signup`
--   **로그인**: `POST /api/auth/login`
