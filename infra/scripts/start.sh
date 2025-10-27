@@ -45,7 +45,7 @@ fi
 # ── 5️⃣ 메인 앱 스택 실행 (DB, Redis, App) ──
 echo ""
 echo "=== Starting Main Application Stack (DB, Redis, App) ==="
-  ${DOCKER_COMPOSE_CMD} --project-directory "${ROOT_DIR}" -f "${INFRA_DATABASE_DIR}/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.yml" up -d --quiet-pull
+  ${DOCKER_COMPOSE_CMD} --project-name artbite --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${INFRA_DATABASE_DIR}/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.yml" up --build -d
 
 echo ""
-echo "All services started successfully!"
+echo "모든 서비스가 성공적으로 시작되었습니다!"

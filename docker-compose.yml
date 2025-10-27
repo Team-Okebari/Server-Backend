@@ -23,7 +23,6 @@ services:
       artbite-redis:
         condition: service_healthy
     volumes:
-      - ./data:/app/data
       - ./logs:/app/logs
     networks:
       - artbite-net
