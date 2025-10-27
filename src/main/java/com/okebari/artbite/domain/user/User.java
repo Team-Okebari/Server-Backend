@@ -49,10 +49,13 @@ public class User extends BaseTimeEntity {
 	@Column(nullable = false)
 	private boolean credentialsNonExpired;
 
+	@Column(nullable = false)
+	private int tokenVersion = 0; // 토큰 무효화를 위한 버전 관리 필드
+
 	@Builder
 	public User(String email, String password, String username, UserRole role, // Existing fields
 		boolean enabled, boolean accountNonExpired, boolean accountNonLocked,
-		boolean credentialsNonExpired) { // New fields
+		boolean credentialsNonExpired, int tokenVersion) { // New fields
 		this.email = email;
 		this.password = password;
 		this.username = username;
@@ -61,6 +64,12 @@ public class User extends BaseTimeEntity {
 		this.accountNonExpired = accountNonExpired;
 		this.accountNonLocked = accountNonLocked;
 		this.credentialsNonExpired = credentialsNonExpired;
+		this.tokenVersion = tokenVersion;
+	}
+
+	// 토큰 버전을 증가시켜 기존 토큰을 무효화하는 메서드
+	public void incrementTokenVersion() {
+		this.tokenVersion++;
 	}
 
 	// UserDetails 구현이 CustomUserDetails로 분리됨

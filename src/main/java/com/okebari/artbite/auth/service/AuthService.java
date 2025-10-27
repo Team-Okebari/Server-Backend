@@ -78,7 +78,7 @@ public class AuthService {
 				.orElseThrow(() -> new RuntimeException("User not found after authentication.")); // Should not happen
 
 			String accessToken = jwtProvider.createToken(authentication);
-			String refreshToken = refreshTokenService.createRefreshToken(user);
+			String refreshToken = refreshTokenService.createRefreshToken(user, user.getTokenVersion());
 
 			// Refresh Token을 HTTP-only 쿠키로 설정
 			addRefreshTokenCookie(response, refreshToken);
@@ -91,29 +91,52 @@ public class AuthService {
 	}
 
 	@Transactional
+	public void revokeAllUserTokens(String email) {
+		User user = userRepository.findByEmail(email)
+			.orElseThrow(() -> new RuntimeException("User not found: " + email));
+		user.incrementTokenVersion();
+		userRepository.save(user); // 변경된 tokenVersion 저장
+		log.info("사용자 {}의 모든 토큰이 무효화되었습니다. 새로운 토큰 버전: {}", email, user.getTokenVersion());
+	}
+
+	@Transactional
 	public TokenDto reissueAccessToken(HttpServletRequest request, HttpServletResponse response) {
 		String refreshToken = getRefreshTokenFromCookie(request);
 		if (!StringUtils.hasText(refreshToken)) {
 			throw new InvalidTokenException("Refresh Token이 쿠키에 없습니다.");
 		}
 
-		// 1. Redis에서 Refresh Token 존재 여부 및 사용자 ID 확인
-		Long userId = refreshTokenService.findUserIdByRefreshToken(refreshToken)
+		// 1. Redis에서 Refresh Token 존재 여부 및 사용자 ID, tokenVersion 확인
+		String userIdAndTokenVersion = refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken)
 			.orElseThrow(() -> new InvalidTokenException("유효하지 않거나 만료된 Refresh Token입니다."));
+
+		String[] parts = userIdAndTokenVersion.split(":");
+		if (parts.length != 2) {
+			throw new InvalidTokenException("손상된 Refresh Token 형식입니다.");
+		}
+		Long userId = Long.parseLong(parts[0]);
+		int refreshTokenVersion = Integer.parseInt(parts[1]);
 
 		// 2. 사용자 정보 로드
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new InvalidTokenException("사용자를 찾을 수 없습니다."));
 
-		// 3. 새로운 Access Token 생성
+		// 3. Refresh Token의 tokenVersion과 User의 현재 tokenVersion 일치 여부 확인
+		if (user.getTokenVersion() != refreshTokenVersion) {
+			log.warn("Refresh Token 버전 불일치: userEmail={}, userTokenVersion={}, refreshTokenVersion={}",
+				user.getEmail(), user.getTokenVersion(), refreshTokenVersion);
+			throw new InvalidTokenException("토큰 버전이 일치하지 않아 Refresh Token이 무효화되었습니다.");
+		}
+
+		// 4. 새로운 Access Token 생성
 		Collection<? extends GrantedAuthority> authorities = List.of(
 			new SimpleGrantedAuthority(user.getRole().getKey()));
 		Authentication authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
 		String newAccessToken = jwtProvider.createToken(authentication);
 
-		// 4. Refresh Token Rotation: 기존 토큰은 삭제하고 새로운 토큰을 발급한다.
+		// 5. Refresh Token Rotation: 기존 토큰은 삭제하고 새로운 토큰을 발급한다.
 		refreshTokenService.deleteRefreshToken(refreshToken);
-		String newRefreshToken = refreshTokenService.createRefreshToken(user);
+		String newRefreshToken = refreshTokenService.createRefreshToken(user, user.getTokenVersion());
 
 		// 새로운 Refresh Token을 HTTP-only 쿠키로 설정
 		addRefreshTokenCookie(response, newRefreshToken);

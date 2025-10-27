@@ -65,6 +65,7 @@ class AuthServiceTest {
 			.password("encodedPassword")
 			.username("testuser")
 			.role(UserRole.USER)
+			.tokenVersion(0) // Add tokenVersion
 			.build();
 
 		Field idField = User.class.getDeclaredField("id");
@@ -130,7 +131,7 @@ class AuthServiceTest {
 			authentication);
 		when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
 		when(jwtProvider.createToken(authentication)).thenReturn("accessToken");
-		when(refreshTokenService.createRefreshToken(testUser)).thenReturn("refreshToken");
+		when(refreshTokenService.createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()))).thenReturn("refreshToken");
 
 		HttpServletResponse response = mock(HttpServletResponse.class);
 
@@ -142,7 +143,7 @@ class AuthServiceTest {
 		verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
 		verify(userRepository).findByEmail(testUser.getEmail());
 		verify(jwtProvider).createToken(authentication);
-		verify(refreshTokenService).createRefreshToken(testUser);
+		verify(refreshTokenService).createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()));
 		verify(response).addCookie(any(Cookie.class));
 	}
 
@@ -156,10 +157,11 @@ class AuthServiceTest {
 		Cookie cookie = new Cookie("refreshToken", refreshToken);
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 
-		when(refreshTokenService.findUserIdByRefreshToken(refreshToken)).thenReturn(Optional.of(testUser.getId()));
+		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken))
+			.thenReturn(Optional.of(testUser.getId() + ":" + testUser.getTokenVersion()));
 		when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
 		when(jwtProvider.createToken(any(Authentication.class))).thenReturn("newAccessToken");
-		when(refreshTokenService.createRefreshToken(testUser)).thenReturn("newRefreshToken");
+		when(refreshTokenService.createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()))).thenReturn("newRefreshToken");
 
 		// when
 		TokenDto tokenDto = authService.reissueAccessToken(request, response);
@@ -167,6 +169,7 @@ class AuthServiceTest {
 		// then
 		assertEquals("newAccessToken", tokenDto.getAccessToken());
 		verify(refreshTokenService).deleteRefreshToken(refreshToken);
+		verify(refreshTokenService).createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()));
 		verify(response).addCookie(any(Cookie.class));
 	}
 
@@ -180,7 +183,43 @@ class AuthServiceTest {
 		Cookie cookie = new Cookie("refreshToken", invalidRefreshToken);
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 
-		when(refreshTokenService.findUserIdByRefreshToken(invalidRefreshToken)).thenReturn(Optional.empty());
+		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(invalidRefreshToken)).thenReturn(Optional.empty());
+
+		// when & then
+		assertThrows(InvalidTokenException.class, () -> {
+			authService.reissueAccessToken(request, response);
+		});
+	}
+
+	@Test
+	@DisplayName("토큰 재발급 실패 - 토큰 버전 불일치")
+	void reissue_fail_tokenVersionMismatch() {
+		// given
+		String refreshToken = "refreshToken";
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		HttpServletResponse response = mock(HttpServletResponse.class);
+		Cookie cookie = new Cookie("refreshToken", refreshToken);
+		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
+
+		User userWithOldTokenVersion = User.builder()
+			.email(testUser.getEmail())
+			.password(testUser.getPassword())
+			.username(testUser.getUsername())
+			.role(testUser.getRole())
+			.tokenVersion(testUser.getTokenVersion() + 1) // User has newer token version
+			.build();
+		// Reflectively set ID for userWithOldTokenVersion
+		try {
+			Field idField = User.class.getDeclaredField("id");
+			idField.setAccessible(true);
+			idField.set(userWithOldTokenVersion, testUser.getId());
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			fail("Failed to set ID for userWithOldTokenVersion: " + e.getMessage());
+		}
+
+		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken))
+			.thenReturn(Optional.of(testUser.getId() + ":" + testUser.getTokenVersion())); // Refresh token has old version
+		when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(userWithOldTokenVersion));
 
 		// when & then
 		assertThrows(InvalidTokenException.class, () -> {
@@ -209,5 +248,35 @@ class AuthServiceTest {
 		verify(redisTemplate.opsForValue()).set(eq(accessToken), eq("logout"), anyLong(), any(TimeUnit.class));
 		verify(refreshTokenService).deleteRefreshToken(refreshToken);
 		verify(response).addCookie(any(Cookie.class));
+	}
+
+	@Test
+	@DisplayName("사용자 모든 토큰 무효화 성공")
+	void revokeAllUserTokens_success() {
+		// given
+		User userBeforeRevoke = User.builder()
+			.email(testUser.getEmail())
+			.password(testUser.getPassword())
+			.username(testUser.getUsername())
+			.role(testUser.getRole())
+			.tokenVersion(testUser.getTokenVersion())
+			.build();
+		try {
+			Field idField = User.class.getDeclaredField("id");
+			idField.setAccessible(true);
+			idField.set(userBeforeRevoke, testUser.getId());
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			fail("Failed to set ID for userBeforeRevoke: " + e.getMessage());
+		}
+
+		when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(userBeforeRevoke));
+		when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		// when
+		authService.revokeAllUserTokens(testUser.getEmail());
+
+		// then
+		verify(userRepository).findByEmail(testUser.getEmail());
+		verify(userRepository).save(argThat(user -> user.getTokenVersion() == testUser.getTokenVersion() + 1));
 	}
 }
