@@ -17,6 +17,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import com.okebari.artbite.auth.service.RefreshTokenService;
+import com.okebari.artbite.common.exception.InvalidTokenException;
+import com.okebari.artbite.common.exception.TokenExpiredException;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -38,7 +40,6 @@ public class JwtProvider {
 	private final RefreshTokenService refreshTokenService;
 	@Value("${jwt.access-token-expire-time}")
 	private long accessTokenExpireTime;
-	@Getter
 	@Value("${jwt.refresh-token-expire-time}")
 	private long refreshTokenExpireTime;
 
@@ -80,37 +81,41 @@ public class JwtProvider {
 		return new UsernamePasswordAuthenticationToken(principal, "", authorities);
 	}
 
-	public boolean validateToken(String token) {
+	public void validateToken(String token) {
 		try {
 			Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-			return true;
 		} catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
 			log.debug("잘못된 JWT 서명입니다.");
+			throw new InvalidTokenException("잘못된 JWT 서명입니다.");
 		} catch (ExpiredJwtException e) {
 			log.debug("만료된 JWT 토큰입니다.");
+			throw new TokenExpiredException("만료된 JWT 토큰입니다.");
 		} catch (UnsupportedJwtException e) {
 			log.debug("지원되지 않는 JWT 토큰입니다.");
+			throw new InvalidTokenException("지원되지 않는 JWT 토큰입니다.");
 		} catch (IllegalArgumentException e) {
 			log.debug("JWT 토큰이 잘못되었습니다.");
+			throw new InvalidTokenException("JWT 토큰이 잘못되었습니다.");
 		}
-		return false;
 	}
 
 	// New method for refresh token validation
-	public boolean validateRefreshToken(String refreshToken) {
+	public void validateRefreshToken(String refreshToken) {
 		try {
 			Jwts.parser().verifyWith(key).build().parseSignedClaims(refreshToken);
-			return true;
 		} catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
 			log.debug("잘못된 Refresh Token 서명입니다.");
+			throw new InvalidTokenException("잘못된 Refresh Token 서명입니다.");
 		} catch (ExpiredJwtException e) {
 			log.debug("만료된 Refresh Token입니다.");
+			throw new TokenExpiredException("만료된 Refresh Token입니다.");
 		} catch (UnsupportedJwtException e) {
 			log.debug("지원되지 않는 Refresh Token입니다.");
+			throw new InvalidTokenException("지원되지 않는 Refresh Token입니다.");
 		} catch (IllegalArgumentException e) {
 			log.debug("Refresh Token이 잘못되었습니다.");
+			throw new InvalidTokenException("Refresh Token이 잘못되었습니다.");
 		}
-		return false;
 	}
 
 	// New method to get authentication from refresh token
@@ -142,6 +147,14 @@ public class JwtProvider {
 		// parseClaims 메소드를 사용하여 만료된 토큰의 경우에도 Claims를 가져올 수 있도록 함
 		Claims claims = parseClaims(token);
 		return claims.getExpiration().getTime() - System.currentTimeMillis();
+	}
+
+	public long getAccessTokenExpireTime() {
+		return accessTokenExpireTime;
+	}
+
+	public long getRefreshTokenExpireTime() {
+		return refreshTokenExpireTime;
 	}
 
 }

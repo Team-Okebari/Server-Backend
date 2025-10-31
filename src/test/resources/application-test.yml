@@ -11,7 +11,7 @@ spring:
       port: 6379
 
 security:
-  whitelisted-paths: /api/auth/**
+  whitelisted-paths: /api/auth/**, /oauth2/**, /login/oauth2/code/**
 
 cors:
   allowed-origins: http://localhost:3000
@@ -20,3 +20,9 @@ jwt:
   secret: dGVzdHNlY3JldGtleWZvcmFydGJpdGVwcm9qZWN0dGVzdHNlY3JldGkeyWZvcmFydGJpdGVwcm9qZWN0Cg==
   access-token-expire-time: 1800000
   refresh-token-expire-time: 1209600000
+
+logging:
+  level:
+    com.okebari.artbite: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

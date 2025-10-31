@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,9 +29,12 @@ import com.okebari.artbite.auth.dto.TokenDto;
 import com.okebari.artbite.auth.jwt.JwtProvider;
 import com.okebari.artbite.common.exception.EmailAlreadyExistsException;
 import com.okebari.artbite.common.exception.InvalidTokenException;
+import com.okebari.artbite.common.exception.TokenExpiredException;
+import com.okebari.artbite.common.exception.UserNotFoundException;
 import com.okebari.artbite.common.service.MdcLogging;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
+import com.okebari.artbite.domain.user.UserSocialLoginRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -41,7 +45,9 @@ public class AuthService {
 	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 	private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
 	private final UserRepository userRepository;
+	private final SocialAuthService socialAuthService; // Injected SocialAuthService
 	private final PasswordEncoder passwordEncoder;
+	@Lazy
 	private final AuthenticationManager authenticationManager;
 	private final JwtProvider jwtProvider;
 	private final RefreshTokenService refreshTokenService; // Injected
@@ -75,7 +81,7 @@ public class AuthService {
 
 			// Load the User entity to pass to RefreshTokenService
 			User user = userRepository.findByEmail(authentication.getName())
-				.orElseThrow(() -> new RuntimeException("User not found after authentication.")); // Should not happen
+				.orElseThrow(UserNotFoundException::new);
 
 			String accessToken = jwtProvider.createToken(authentication);
 			String refreshToken = refreshTokenService.createRefreshToken(user, user.getTokenVersion());
@@ -107,11 +113,19 @@ public class AuthService {
 		}
 
 		// 1. Redis에서 Refresh Token 존재 여부 및 사용자 ID, tokenVersion 확인
+		// 이 단계에서 Refresh Token의 존재 여부와 Redis에 의한 만료 여부가 함께 검증됩니다.
 		String userIdAndTokenVersion = refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken)
-			.orElseThrow(() -> new InvalidTokenException("유효하지 않거나 만료된 Refresh Token입니다."));
+			.orElseThrow(() -> {
+				// Redis에 없는 경우, 만료되었거나 유효하지 않은 것으로 간주하고 쿠키 삭제
+				deleteRefreshTokenCookie(response);
+				return new InvalidTokenException("유효하지 않거나 만료된 Refresh Token입니다.");
+			});
 
 		String[] parts = userIdAndTokenVersion.split(":");
 		if (parts.length != 2) {
+			// Redis에 있지만 형식이 잘못된 경우 (매우 드물지만 방어적 코딩)
+			refreshTokenService.deleteRefreshToken(refreshToken); // 손상된 토큰 삭제
+			deleteRefreshTokenCookie(response);
 			throw new InvalidTokenException("손상된 Refresh Token 형식입니다.");
 		}
 		Long userId = Long.parseLong(parts[0]);
@@ -119,23 +133,35 @@ public class AuthService {
 
 		// 2. 사용자 정보 로드
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new InvalidTokenException("사용자를 찾을 수 없습니다."));
+			.orElseThrow(() -> {
+				// 사용자를 찾을 수 없는 경우 (예: 사용자 삭제), 토큰도 삭제
+				refreshTokenService.deleteRefreshToken(refreshToken);
+				deleteRefreshTokenCookie(response);
+				return new InvalidTokenException("사용자를 찾을 수 없습니다.");
+			});
 
-		// 3. Refresh Token의 tokenVersion과 User의 현재 tokenVersion 일치 여부 확인
+		// 3. Refresh Token Rotation: 기존 토큰은 삭제하고 새로운 토큰을 발급한다.
+		// 이전에 Redis에서 토큰을 찾지 못해 예외를 던졌으므로, 여기서는 Redis에 토큰이 존재한다고 가정.
+		// 하지만 방어적으로 다시 한번 삭제 로직을 포함하는 것이 안전.
+		refreshTokenService.deleteRefreshToken(refreshToken); // 기존 Refresh Token 삭제
+
+		// 4. Refresh Token의 tokenVersion과 User의 현재 tokenVersion 일치 여부 확인
 		if (user.getTokenVersion() != refreshTokenVersion) {
 			log.warn("Refresh Token 버전 불일치: userEmail={}, userTokenVersion={}, refreshTokenVersion={}",
 				user.getEmail(), user.getTokenVersion(), refreshTokenVersion);
-			throw new InvalidTokenException("토큰 버전이 일치하지 않아 Refresh Token이 무효화되었습니다.");
+			// 버전 불일치 시, 해당 사용자의 모든 토큰 무효화 (보안 강화)
+			revokeAllUserTokens(user.getEmail()); // 해당 사용자의 모든 토큰 무효화
+			deleteRefreshTokenCookie(response); // 클라이언트 쿠키 삭제
+			throw new InvalidTokenException("토큰 버전이 일치하지 않아 Refresh Token이 무효화되었습니다. 재로그인하십시오.");
 		}
 
-		// 4. 새로운 Access Token 생성
+		// 5. 새로운 Access Token 생성
 		Collection<? extends GrantedAuthority> authorities = List.of(
 			new SimpleGrantedAuthority(user.getRole().getKey()));
 		Authentication authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
 		String newAccessToken = jwtProvider.createToken(authentication);
 
-		// 5. Refresh Token Rotation: 기존 토큰은 삭제하고 새로운 토큰을 발급한다.
-		refreshTokenService.deleteRefreshToken(refreshToken);
+		// 6. 새로운 Refresh Token 발급
 		String newRefreshToken = refreshTokenService.createRefreshToken(user, user.getTokenVersion());
 
 		// 새로운 Refresh Token을 HTTP-only 쿠키로 설정
@@ -146,13 +172,20 @@ public class AuthService {
 			.build();
 	}
 
-	public void logout(String accessToken, String userEmail, HttpServletRequest request, HttpServletResponse response) {
+	public String logout(String accessToken, String userEmail, HttpServletRequest request, HttpServletResponse response) {
 		try (var ignored = (userEmail != null) ? MdcLogging.withContext("email", userEmail) : null) {
 			log.info("로그아웃 시도: email={}", userEmail != null ? userEmail : "unknown");
 
 			// 1. Access Token 블랙리스트에 추가
 			// Access Token의 남은 유효 시간
-			Long expiration = jwtProvider.getExpiration(accessToken);
+			Long expiration;
+			try {
+				expiration = jwtProvider.getExpiration(accessToken);
+			} catch (TokenExpiredException | InvalidTokenException e) {
+				log.warn("로그아웃 시도 중 유효하지 않거나 만료된 Access Token: {}", e.getMessage());
+				throw new InvalidTokenException("유효하지 않거나 만료된 Access Token입니다.");
+			}
+
 			if (expiration > 0) {
 				redisTemplate.opsForValue().set(accessToken, "logout", expiration, TimeUnit.MILLISECONDS);
 				log.debug("Access Token 블랙리스트에 추가됨: email={}, expiration={}ms",
@@ -168,15 +201,27 @@ public class AuthService {
 
 			// 3. Refresh Token 쿠키 삭제
 			deleteRefreshTokenCookie(response);
+
+			// Delegate social logout URL construction to SocialAuthService
+			return socialAuthService.getSocialLogoutRedirectUrl(userEmail);
 		}
 	}
 
-	private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+	public void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
 		Cookie cookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken);
 		cookie.setHttpOnly(true);
 		cookie.setSecure(true); // HTTPS 사용 시
 		cookie.setPath("/"); // 모든 경로에서 접근 가능
 		cookie.setMaxAge((int)(jwtProvider.getRefreshTokenExpireTime() / 1000)); // 초 단위
+		response.addCookie(cookie);
+	}
+
+	public void addAccessTokenCookie(HttpServletResponse response, String accessToken) {
+		Cookie cookie = new Cookie("accessToken", accessToken); // Access Token 쿠키 이름은 "accessToken"으로 가정
+		cookie.setHttpOnly(true);
+		cookie.setSecure(true); // HTTPS 사용 시
+		cookie.setPath("/"); // 모든 경로에서 접근 가능
+		cookie.setMaxAge((int)(jwtProvider.getAccessTokenExpireTime() / 1000)); // 초 단위
 		response.addCookie(cookie);
 	}
 

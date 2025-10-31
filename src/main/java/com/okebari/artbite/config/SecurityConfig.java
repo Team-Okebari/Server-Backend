@@ -12,17 +12,19 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.okebari.artbite.auth.handler.OAuth2LoginFailureHandler;
+import com.okebari.artbite.auth.handler.OAuth2LoginSuccessHandler;
 import com.okebari.artbite.auth.jwt.JwtAccessDeniedHandler;
 import com.okebari.artbite.auth.jwt.JwtAuthenticationEntryPoint;
 import com.okebari.artbite.auth.jwt.JwtAuthenticationFilter;
+import com.okebari.artbite.auth.service.CustomOAuth2UserService;
+import com.okebari.artbite.auth.service.CustomOidcUserService;
 import com.okebari.artbite.common.filter.MdcLoggingFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,13 @@ public class SecurityConfig {
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 	private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
-	private final AuthenticationConfiguration authenticationConfiguration; // Added injection
+	private final AuthenticationConfiguration authenticationConfiguration;
+
+	// OAuth2 관련 빈 주입
+	private final CustomOAuth2UserService customOAuth2UserService;
+	private final CustomOidcUserService customOidcUserService;
+	private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+	private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
 	@Value("${security.whitelisted-paths}")
 	private final String[] whitelistedPaths;
@@ -45,11 +53,6 @@ public class SecurityConfig {
 	private String[] corsAllowedOrigins;
 
 	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
-
-	@Bean // Added AuthenticationManager bean
 	public AuthenticationManager authenticationManager() throws Exception {
 		return authenticationConfiguration.getAuthenticationManager();
 	}
@@ -66,13 +69,21 @@ public class SecurityConfig {
 			.sessionManagement(sessionManagement -> sessionManagement
 				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			)
+			.logout(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(authorize -> authorize
 				.requestMatchers(whitelistedPaths).permitAll() //application-local.yml에서 화이트리스트 관리
-				.requestMatchers("/api/auth/reissue").permitAll() // Added for refresh token
 				.anyRequest().authenticated()
 			)
+			.oauth2Login(oauth2 -> oauth2
+				.userInfoEndpoint(userInfo -> userInfo
+					.userService(customOAuth2UserService)
+					.oidcUserService(customOidcUserService)
+				)
+				.successHandler(oAuth2LoginSuccessHandler)
+				.failureHandler(oAuth2LoginFailureHandler)
+			)
 			.headers(
-				headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())) // H2 콘솔을 위한 frameOptions 설정
+				headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterBefore(mdcLoggingFilter, JwtAuthenticationFilter.class);
 
@@ -83,7 +94,7 @@ public class SecurityConfig {
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 
-		configuration.setAllowedOrigins(Arrays.asList(corsAllowedOrigins)); // application-local.yml에서 설정된 오리진 허용
+		configuration.setAllowedOrigins(Arrays.asList(corsAllowedOrigins)); // application-*.yml에서 설정된 오리진 허용
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("*"));
 		configuration.setAllowCredentials(true);

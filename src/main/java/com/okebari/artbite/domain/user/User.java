@@ -1,5 +1,9 @@
 package com.okebari.artbite.domain.user;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,6 +11,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 import com.okebari.artbite.domain.common.BaseTimeEntity;
@@ -52,10 +57,13 @@ public class User extends BaseTimeEntity {
 	@Column(nullable = false)
 	private int tokenVersion = 0; // 토큰 무효화를 위한 버전 관리 필드
 
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<UserSocialLogin> socialLogins = new ArrayList<>();
+
 	@Builder
-	public User(String email, String password, String username, UserRole role, // Existing fields
+	public User(String email, String password, String username, UserRole role,
 		boolean enabled, boolean accountNonExpired, boolean accountNonLocked,
-		boolean credentialsNonExpired, int tokenVersion) { // New fields
+		boolean credentialsNonExpired, int tokenVersion) {
 		this.email = email;
 		this.password = password;
 		this.username = username;
@@ -70,6 +78,14 @@ public class User extends BaseTimeEntity {
 	// 토큰 버전을 증가시켜 기존 토큰을 무효화하는 메서드
 	public void incrementTokenVersion() {
 		this.tokenVersion++;
+	}
+
+	// 소셜 로그인 정보 업데이트 (username만 업데이트)
+	// 기존 username이 없는 경우에만 업데이트
+	public void updateOAuthInfo(String name) {
+		if (this.username == null || this.username.isEmpty()) {
+			this.username = name;
+		}
 	}
 
 	// UserDetails 구현이 CustomUserDetails로 분리됨

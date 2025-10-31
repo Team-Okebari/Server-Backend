@@ -78,6 +78,22 @@
         <appender-ref ref="STDOUT_JSON"/>
     </logger>
 
+    <!-- Spring Security 및 OAuth2 디버그 로거 -->
+    <logger name="org.springframework.security" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT_JSON"/>
+        <appender-ref ref="APP_FILE"/>
+    </logger>
+    <logger name="org.springframework.security.oauth2" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT_JSON"/>
+        <appender-ref ref="APP_FILE"/>
+    </logger>
+
+    <!-- JwtAuthenticationFilter 디버그 로거 -->
+    <logger name="com.okebari.artbite.auth.jwt" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT_JSON"/>
+        <appender-ref ref="APP_FILE"/>
+    </logger>
+
     <!-- 루트 로거: 기본적으로 모든 로그를 처리 -->
     <root level="${LOG_LEVEL}">
         <appender-ref ref="STDOUT_JSON"/>

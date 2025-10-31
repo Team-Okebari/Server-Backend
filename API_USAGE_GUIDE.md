@@ -61,7 +61,33 @@ Artbite API는 JWT(JSON Web Token) 기반의 인증 방식을 사용합니다. A
     Set-Cookie: refreshToken=a3f6747d-5d9f-4099-...; Max-Age=1209600; Path=/; Secure; HttpOnly
     ```
 
-### 2.3. 인증된 요청 (Authenticated Requests)
+### 2.3. OAuth2 소셜 로그인 (OAuth2 Social Login)
+
+사용자는 소셜 미디어 계정(카카오, 구글, 네이버)을 통해 로그인할 수 있습니다. 소셜 로그인 성공 시 Access Token은 URL 쿼리 파라미터로 전달되며, Refresh Token은 HTTP-only 쿠키로 설정됩니다.
+
+*   **시작 엔드포인트:**
+    *   카카오: `GET http://localhost:8080/oauth2/authorization/kakao`
+    *   구글: `GET http://localhost:8080/oauth2/authorization/google`
+    *   네이버: `GET http://localhost:8080/oauth2/authorization/naver`
+*   **인증 흐름:**
+    1.  사용자가 위 시작 엔드포인트 중 하나로 접근합니다.
+    2.  백엔드는 해당 소셜 공급자의 인증 페이지로 사용자를 리다이렉트합니다.
+    3.  사용자가 소셜 공급자에서 인증을 완료하면, 소셜 공급자는 백엔드의 콜백 URL(`http://localhost:8080/login/oauth2/code/{provider}`)로 리다이렉트합니다.
+    4.  백엔드는 콜백을 처리하여 사용자 정보를 가져오고, `User` 및 `UserSocialLogin` 엔티티를 생성/업데이트하며, Access Token과 Refresh Token을 발급합니다.
+    5.  백엔드는 최종적으로 프론트엔드의 `successRedirectUri`로 리다이렉트합니다. (`http://localhost:3000/oauth2/redirect` 또는 설정된 프론트엔드 URL)
+*   **성공 응답 (프론트엔드 리다이렉트 URL):**
+    ```
+    http://localhost:3000/oauth2/redirect?accessToken=eyJhbGciOiJIUzI1NiI...
+    ```
+*   **성공 응답 (응답 헤더):**
+    ```
+    Set-Cookie: refreshToken=a3f6747d-5d9f-4099-...; Max-Age=1209600; Path=/; Secure; HttpOnly
+    ```
+*   **토큰 처리:**
+    *   **Access Token**: 프론트엔드는 리다이렉트된 URL의 쿼리 파라미터에서 `accessToken`을 추출하여 로컬 스토리지 또는 애플리케이션 상태에 저장해야 합니다.
+    *   **Refresh Token**: `Set-Cookie` 헤더를 통해 HTTP-only 쿠키로 자동 설정됩니다.
+
+### 2.4. 인증된 요청 (Authenticated Requests)
 
 로그인 후 발급받은 `accessToken`을 사용하여 보호된 API 엔드포인트에 접근할 수 있습니다. `accessToken`은 모든 요청의 `Authorization` 헤더에 `Bearer` 접두사와 함께 포함되어야 합니다. Refresh Token은 브라우저가 자동으로 `Cookie` 헤더에 포함하여 전송합니다.
 
@@ -71,7 +97,7 @@ Artbite API는 JWT(JSON Web Token) 기반의 인증 방식을 사용합니다. A
     Cookie: refreshToken=a3f6747d-5d9f-4099-...
     ```
 
-### 2.4. 토큰 재발급 (Token Reissue)
+### 2.5. 토큰 재발급 (Token Reissue)
 
 `accessToken`이 만료되었을 때, HTTP-only 쿠키에 저장된 `refreshToken`을 사용하여 새로운 `accessToken`과 `refreshToken`을 발급받을 수 있습니다. 이 과정에서 **Refresh Token Rotation**이 적용되어, 기존 `refreshToken`은 무효화되고 새로운 `refreshToken`이 발급됩니다.
 
@@ -99,9 +125,9 @@ Artbite API는 JWT(JSON Web Token) 기반의 인증 방식을 사용합니다. A
     Set-Cookie: refreshToken=new_a3f6747d-5d9f-4099-...; Max-Age=1209600; Path=/; Secure; HttpOnly
     ```
 
-### 2.5. 로그아웃 (Logout)
+### 2.6. 로그아웃 (Logout)
 
-현재 로그인된 세션을 종료하고 Access Token과 Refresh Token을 무효화합니다.
+현재 로그인된 세션을 종료하고 Access Token과 Refresh Token을 무효화합니다. 카카오 소셜 로그인 사용자의 경우, 카카오 계정에서도 로그아웃할 수 있는 옵션을 제공하기 위해 카카오 로그아웃 페이지로 리다이렉트될 수 있습니다.
 
 *   **엔드포인트:** `POST /api/auth/logout`
 *   **요청 바디 (JSON):**
@@ -114,18 +140,31 @@ Artbite API는 JWT(JSON Web Token) 기반의 인증 방식을 사용합니다. A
     Cookie: refreshToken=a3f6747d-5d9f-4099-...
     ```
 *   **성공 응답 (JSON 바디):**
-    ```json
-    {
-      "success": true,
-      "timestamp": "YYYY-MM-DDTHH:MM:SS.NNNNNNNNN"
-    }
-    ```
+    *   **일반 로그아웃:**
+        ```json
+        {
+          "success": true,
+          "data": null,
+          "timestamp": "YYYY-MM-DDTHH:MM:SS.NNNNNNNNN"
+        }
+        ```
+    *   **카카오 소셜 로그아웃 (리다이렉트 필요):**
+        ```json
+        {
+          "success": true,
+          "data": "https://kauth.kakao.com/oauth/logout?client_id=...&logout_redirect_uri=...", // 카카오 로그아웃 페이지 URL
+          "timestamp": "YYYY-MM-DDTHH:MM:SS.NNNNNNNNN"
+        }
+        ```
 *   **성공 응답 (응답 헤더):** (Refresh Token 쿠키가 삭제됩니다.)
     ```
     Set-Cookie: refreshToken=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:10 GMT; Path=/; Secure; HttpOnly
     ```
+*   **프론트엔드 처리:**
+    *   응답 `data` 필드에 URL이 포함되어 있다면, 해당 URL로 브라우저를 리다이렉트하여 소셜 로그아웃 흐름을 완료해야 합니다.
+    *   `data` 필드가 `null`이라면, 일반 로그아웃이므로 프론트엔드에서 로컬 상태를 정리합니다.
 
-### 2.6. 토큰 무효화 (Token Invalidation)
+### 2.7. 토큰 무효화 (Token Invalidation)
 
 보안 강화를 위해, 사용자의 비밀번호 변경과 같은 중요한 보안 이벤트 발생 시 해당 사용자의 모든 기존 Refresh Token이 자동으로 무효화됩니다. 이 경우, 기존 Refresh Token을 사용한 재발급 요청은 실패하게 됩니다. 이는 탈취된 토큰의 위험을 최소화하기 위한 조치입니다.
 

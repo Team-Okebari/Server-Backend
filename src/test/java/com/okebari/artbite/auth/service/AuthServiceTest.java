@@ -55,6 +55,8 @@ class AuthServiceTest {
 	private RedisTemplate<String, String> redisTemplate;
 	@Mock
 	private ValueOperations<String, String> valueOperations;
+	@Mock
+	private SocialAuthService socialAuthService; // Injected SocialAuthService
 
 	private User testUser;
 
@@ -131,7 +133,8 @@ class AuthServiceTest {
 			authentication);
 		when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
 		when(jwtProvider.createToken(authentication)).thenReturn("accessToken");
-		when(refreshTokenService.createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()))).thenReturn("refreshToken");
+		when(refreshTokenService.createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()))).thenReturn(
+			"refreshToken");
 
 		HttpServletResponse response = mock(HttpServletResponse.class);
 
@@ -161,7 +164,8 @@ class AuthServiceTest {
 			.thenReturn(Optional.of(testUser.getId() + ":" + testUser.getTokenVersion()));
 		when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
 		when(jwtProvider.createToken(any(Authentication.class))).thenReturn("newAccessToken");
-		when(refreshTokenService.createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()))).thenReturn("newRefreshToken");
+		when(refreshTokenService.createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()))).thenReturn(
+			"newRefreshToken");
 
 		// when
 		TokenDto tokenDto = authService.reissueAccessToken(request, response);
@@ -183,7 +187,8 @@ class AuthServiceTest {
 		Cookie cookie = new Cookie("refreshToken", invalidRefreshToken);
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 
-		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(invalidRefreshToken)).thenReturn(Optional.empty());
+		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(invalidRefreshToken)).thenReturn(
+			Optional.empty());
 
 		// when & then
 		assertThrows(InvalidTokenException.class, () -> {
@@ -205,8 +210,12 @@ class AuthServiceTest {
 			.email(testUser.getEmail())
 			.password(testUser.getPassword())
 			.username(testUser.getUsername())
-			.role(testUser.getRole())
+			.role(UserRole.USER)
 			.tokenVersion(testUser.getTokenVersion() + 1) // User has newer token version
+			.accountNonExpired(true) // Add default values for account status
+			.accountNonLocked(true)
+			.credentialsNonExpired(true)
+			.enabled(true)
 			.build();
 		// Reflectively set ID for userWithOldTokenVersion
 		try {
@@ -218,8 +227,14 @@ class AuthServiceTest {
 		}
 
 		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken))
-			.thenReturn(Optional.of(testUser.getId() + ":" + testUser.getTokenVersion())); // Refresh token has old version
+			.thenReturn(
+				Optional.of(testUser.getId() + ":" + testUser.getTokenVersion())); // Refresh token has old version
 		when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(userWithOldTokenVersion));
+		when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(userWithOldTokenVersion));
+		when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+			User savedUser = invocation.getArgument(0);
+			return savedUser;
+		});
 
 		// when & then
 		assertThrows(InvalidTokenException.class, () -> {
@@ -240,6 +255,9 @@ class AuthServiceTest {
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 		when(jwtProvider.getExpiration(accessToken)).thenReturn(1000L);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+		// given
+		when(socialAuthService.getSocialLogoutRedirectUrl(testUser.getEmail())).thenReturn(null); // Mock social logout to return null for this test
 
 		// when
 		authService.logout(accessToken, testUser.getEmail(), request, response);

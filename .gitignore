@@ -44,3 +44,6 @@ out/
 
 ### env ###
 .env
+
+### secret ###
+application-secret.yml

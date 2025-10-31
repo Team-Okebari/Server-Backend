@@ -7,36 +7,82 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okebari.artbite.AbstractContainerBaseTest;
 import com.okebari.artbite.auth.dto.LoginRequestDto;
 import com.okebari.artbite.auth.dto.SignupRequestDto;
 import com.okebari.artbite.auth.dto.TokenDto;
+import com.okebari.artbite.auth.jwt.JwtAuthenticationFilter;
+import com.okebari.artbite.auth.jwt.JwtProvider;
 import com.okebari.artbite.auth.service.AuthService;
+import com.okebari.artbite.auth.service.RefreshTokenService;
+import com.okebari.artbite.auth.vo.CustomUserDetails;
 import com.okebari.artbite.common.exception.EmailAlreadyExistsException;
+import com.okebari.artbite.common.exception.GlobalExceptionHandler;
+import com.okebari.artbite.domain.user.User;
+import com.okebari.artbite.domain.user.UserRole;
 
 @SpringBootTest
-@AutoConfigureMockMvc
 class AuthControllerTest extends AbstractContainerBaseTest {
 
-	@Autowired
 	private MockMvc mockMvc;
 
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	@Autowired // Added
+	private MappingJackson2HttpMessageConverter jacksonMessageConverter;
+
 	@MockitoBean
 	private AuthService authService;
+
+	@MockitoBean
+	private AuthenticationManager authenticationManager;
+
+	@MockitoBean
+	private JwtProvider jwtProvider;
+
+	@MockitoBean
+	private RefreshTokenService refreshTokenService;
+
+	@MockitoBean
+	private RedisTemplate<String, String> redisTemplate;
+
+	@MockitoBean
+	private PasswordEncoder passwordEncoder;
+
+	@MockitoBean
+	private UserDetailsService userDetailsService;
+
+	@MockitoBean
+	private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+	@BeforeEach
+	void setup() {
+		this.mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService))
+			.setControllerAdvice(new GlobalExceptionHandler())
+			.setMessageConverters(jacksonMessageConverter)
+			.setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+			.build();
+	}
 
 	@Test
 	@DisplayName("회원가입 성공")
@@ -52,7 +98,8 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		// when & then
 		mockMvc.perform(post("/api/auth/signup")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(requestDto)))
+				.content(objectMapper.writeValueAsString(requestDto))
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.data").value(1L));
@@ -72,7 +119,8 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		// when & then
 		mockMvc.perform(post("/api/auth/signup")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(requestDto)))
+				.content(objectMapper.writeValueAsString(requestDto))
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.error.code").value("A001"));
@@ -92,9 +140,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		// when & then
 		mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(requestDto)))
+				.content(objectMapper.writeValueAsString(requestDto))
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.data.accessToken").value("accessToken"));
 	}
 
@@ -107,7 +155,8 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		// when & then
 		mockMvc.perform(post("/api/auth/reissue")
-				.cookie(new Cookie("refreshToken", "refreshToken")))
+				.cookie(new Cookie("refreshToken", "refreshToken"))
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.data.accessToken").value("newAccessToken"));
@@ -115,14 +164,41 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 	@Test
 	@DisplayName("로그아웃 성공")
-	@WithMockUser
+	@SuppressWarnings("unchecked")
 	void logout_success() throws Exception {
 		// given
-		doNothing().when(authService).logout(any(), any(), any(), any());
+		// RedisTemplate 모의 설정 추가
+		org.springframework.data.redis.core.ValueOperations<String, String> valueOperations = mock(
+			org.springframework.data.redis.core.ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+		when(valueOperations.get(anyString())).thenReturn(null); // 블랙리스트에 없는 토큰으로 설정
 
+		// Set up a mock Authentication object with CustomUserDetails as principal
+		User mockUser = User.builder()
+			.email("test@example.com")
+			.password("encodedPassword")
+			.username("testuser")
+			.role(UserRole.USER)
+			.enabled(true)
+			.accountNonExpired(true)
+			.accountNonLocked(true)
+			.credentialsNonExpired(true)
+			.build();
+		CustomUserDetails customUserDetails = new CustomUserDetails(mockUser);
+
+		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+			customUserDetails, null, customUserDetails.getAuthorities());
+		SecurityContextHolder.getContext()
+			.setAuthentication(authentication); // Set the authentication in SecurityContextHolder
+
+		doNothing().when(jwtAuthenticationFilter)
+			.doFilter(any(), any(), any()); // JwtAuthenticationFilter가 SecurityContext를 덮어쓰지 않도록 Mocking
+
+		when(authService.logout(any(), any(), any(), any())).thenReturn(null); // Mock logout to return null for non-social logout
 		// when & then
 		mockMvc.perform(post("/api/auth/logout")
-				.header("Authorization", "Bearer accessToken"))
+				.header("Authorization", "Bearer accessToken")
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true));
 	}

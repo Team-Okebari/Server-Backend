@@ -9,7 +9,7 @@ spring:
 
 # 운영 환경에서는 필수적인 인증/인가 경로 외에는 화이트리스트를 최소화합니다.
 security:
-  whitelisted-paths: /api/auth/**
+  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**
 
 cors:
   allowed-origins: ${CORS_URL}

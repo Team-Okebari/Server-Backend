@@ -1,6 +1,9 @@
 services:
   app:
     image: ${DOCKER_IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: artbite-app
     ports:
       - "8080:8080"
