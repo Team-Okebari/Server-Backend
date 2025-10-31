@@ -204,8 +204,8 @@
         <property name="fileNamePattern" value="[\\/]generated[\\/].*"/>
     </module>
 
-    <!-- Exclude LogoutTestController.java -->
+    <!-- Exclude LoginTestController.java -->
     <module name="BeforeExecutionExclusionFileFilter">
-        <property name="fileNamePattern" value="LogoutTestController\.java$"/>
+        <property name="fileNamePattern" value="LoginTestController\.java$"/>
     </module>
 </module>
