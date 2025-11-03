@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,12 +30,10 @@ import com.okebari.artbite.auth.dto.TokenDto;
 import com.okebari.artbite.auth.jwt.JwtProvider;
 import com.okebari.artbite.common.exception.EmailAlreadyExistsException;
 import com.okebari.artbite.common.exception.InvalidTokenException;
-import com.okebari.artbite.common.exception.TokenExpiredException;
 import com.okebari.artbite.common.exception.UserNotFoundException;
 import com.okebari.artbite.common.service.MdcLogging;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
-import com.okebari.artbite.domain.user.UserSocialLoginRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -97,6 +96,7 @@ public class AuthService {
 	}
 
 	@Transactional
+	@CacheEvict(value = "userDetails", key = "#email")
 	public void revokeAllUserTokens(String email) {
 		User user = userRepository.findByEmail(email)
 			.orElseThrow(() -> new RuntimeException("User not found: " + email));
@@ -112,9 +112,8 @@ public class AuthService {
 			throw new InvalidTokenException("Refresh Token이 쿠키에 없습니다.");
 		}
 
-		// 1. Redis에서 Refresh Token 존재 여부 및 사용자 ID, tokenVersion 확인
-		// 이 단계에서 Refresh Token의 존재 여부와 Redis에 의한 만료 여부가 함께 검증됩니다.
-		String userIdAndTokenVersion = refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken)
+		// 1. Redis에서 Refresh Token 존재 여부 및 사용자 ID, tokenVersion 확인 (원자적으로 조회 및 삭제)
+		String userIdAndTokenVersion = refreshTokenService.getAndRemoveRefreshToken(refreshToken)
 			.orElseThrow(() -> {
 				// Redis에 없는 경우, 만료되었거나 유효하지 않은 것으로 간주하고 쿠키 삭제
 				deleteRefreshTokenCookie(response);
@@ -123,8 +122,8 @@ public class AuthService {
 
 		String[] parts = userIdAndTokenVersion.split(":");
 		if (parts.length != 2) {
-			// Redis에 있지만 형식이 잘못된 경우 (매우 드물지만 방어적 코딩)
-			refreshTokenService.deleteRefreshToken(refreshToken); // 손상된 토큰 삭제
+			// Redis에서 가져왔지만 형식이 잘못된 경우 (매우 드물지만 방어적 코딩)
+			// 이미 삭제되었으므로 추가 삭제 로직 불필요
 			deleteRefreshTokenCookie(response);
 			throw new InvalidTokenException("손상된 Refresh Token 형식입니다.");
 		}
@@ -134,16 +133,12 @@ public class AuthService {
 		// 2. 사용자 정보 로드
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> {
-				// 사용자를 찾을 수 없는 경우 (예: 사용자 삭제), 토큰도 삭제
-				refreshTokenService.deleteRefreshToken(refreshToken);
+				// 사용자를 찾을 수 없는 경우 (예: 사용자 삭제), 토큰도 삭제되었으므로 쿠키만 삭제
 				deleteRefreshTokenCookie(response);
 				return new InvalidTokenException("사용자를 찾을 수 없습니다.");
 			});
 
-		// 3. Refresh Token Rotation: 기존 토큰은 삭제하고 새로운 토큰을 발급한다.
-		// 이전에 Redis에서 토큰을 찾지 못해 예외를 던졌으므로, 여기서는 Redis에 토큰이 존재한다고 가정.
-		// 하지만 방어적으로 다시 한번 삭제 로직을 포함하는 것이 안전.
-		refreshTokenService.deleteRefreshToken(refreshToken); // 기존 Refresh Token 삭제
+		// 3. Refresh Token Rotation: 기존 토큰은 이미 삭제되었으므로 새로운 토큰을 발급한다.
 
 		// 4. Refresh Token의 tokenVersion과 User의 현재 tokenVersion 일치 여부 확인
 		if (user.getTokenVersion() != refreshTokenVersion) {
@@ -172,24 +167,26 @@ public class AuthService {
 			.build();
 	}
 
-	public String logout(String accessToken, String userEmail, HttpServletRequest request, HttpServletResponse response) {
+	public String logout(String bearerAccessToken, String userEmail, HttpServletRequest request,
+		HttpServletResponse response) {
 		try (var ignored = (userEmail != null) ? MdcLogging.withContext("email", userEmail) : null) {
 			log.info("로그아웃 시도: email={}", userEmail != null ? userEmail : "unknown");
 
 			// 1. Access Token 블랙리스트에 추가
-			// Access Token의 남은 유효 시간
-			Long expiration;
-			try {
-				expiration = jwtProvider.getExpiration(accessToken);
-			} catch (TokenExpiredException | InvalidTokenException e) {
-				log.warn("로그아웃 시도 중 유효하지 않거나 만료된 Access Token: {}", e.getMessage());
-				throw new InvalidTokenException("유효하지 않거나 만료된 Access Token입니다.");
-			}
+			if (bearerAccessToken != null && bearerAccessToken.startsWith("Bearer ")) {
+				String accessToken = bearerAccessToken.substring(7);
+				Long expiration = 0L;
+				try {
+					expiration = jwtProvider.getExpiration(accessToken);
+				} catch (Exception e) {
+					log.warn("로그아웃 시도 중 Access Token 검증 실패 (만료 또는 유효하지 않음): {}", e.getMessage());
+				}
 
-			if (expiration > 0) {
-				redisTemplate.opsForValue().set(accessToken, "logout", expiration, TimeUnit.MILLISECONDS);
-				log.debug("Access Token 블랙리스트에 추가됨: email={}, expiration={}ms",
-					userEmail != null ? userEmail : "unknown", expiration);
+				if (expiration > 0) {
+					redisTemplate.opsForValue().set(accessToken, "logout", expiration, TimeUnit.MILLISECONDS);
+					log.debug("Access Token 블랙리스트에 추가됨: email={}, expiration={}ms",
+						userEmail != null ? userEmail : "unknown", expiration);
+				}
 			}
 
 			// 2. Refresh Token 삭제 (쿠키에서 가져와서 삭제)

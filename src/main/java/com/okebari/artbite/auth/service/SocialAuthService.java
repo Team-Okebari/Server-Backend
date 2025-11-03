@@ -3,6 +3,7 @@ package com.okebari.artbite.auth.service;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class SocialAuthService {
 	@Value("${oauth2.logout.redirect-uri.kakao}")
 	private String kakaoLogoutRedirectUri;
 
+	@CacheEvict(value = "userDetails", key = "#attributes.email")
 	public User saveOrUpdate(OAuthAttributes attributes) {
 		Optional<UserSocialLogin> userSocialLoginOptional = userSocialLoginRepository.findByProviderAndProviderId(
 			attributes.provider(), attributes.providerId());

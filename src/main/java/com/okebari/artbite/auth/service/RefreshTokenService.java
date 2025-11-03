@@ -37,4 +37,9 @@ public class RefreshTokenService {
 	public void deleteRefreshToken(String refreshToken) {
 		redisTemplate.delete(refreshToken);
 	}
+
+	public Optional<String> getAndRemoveRefreshToken(String refreshToken) {
+		String value = redisTemplate.opsForValue().getAndDelete(refreshToken);
+		return Optional.ofNullable(value);
+	}
 }
