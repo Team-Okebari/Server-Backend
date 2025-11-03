@@ -9,7 +9,7 @@ spring:
 
 # 개발 환경에서는 인증/인가 경로 외에도 필요한 경로를 화이트리스트에 추가할 수 있습니다.
 security:
-  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /swagger-ui/**, /v3/api-docs/**, /swagger-resources/**, /webjars/**, /login-test-page
+  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /swagger-ui/**, /v3/api-docs/**, /swagger-resources/**, /webjars/**, /login-test-page, /membership-test-page
 
 cors:
   allowed-origins: ${CORS_URL:-http://localhost:5173}
@@ -17,3 +17,10 @@ cors:
 jwt:
   access-token-expire-time: ${JWT_ACCESS_TOKEN_EXPIRE_TIME}
   refresh-token-expire-time: ${JWT_REFRESH_TOKEN_EXPIRE_TIME}
+
+payment:
+  toss:
+    test_client_api_key: ${TOSS_PAYMENTS_TEST_CLIENT_API_KEY}
+    test_secret_api_key: ${TOSS_PAYMENTS_TEST_SECRET_API_KEY}
+    success_url: "http://localhost:8080/api/payments/toss/success"
+    fail_url: "http://localhost:8080/api/payments/toss/fail"

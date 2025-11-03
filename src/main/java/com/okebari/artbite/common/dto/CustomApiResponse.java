@@ -70,6 +70,19 @@ public class CustomApiResponse<T> { // Changed from record to class
 			.build();
 	}
 
+	// 에러 응답 (데이터 포함)
+	public static <T> CustomApiResponse<T> error(ErrorCode errorCode, String message, T data) {
+		return CustomApiResponse.<T>builder()
+			.success(false)
+			.data(data)
+			.error(Error.builder()
+				.code(errorCode.getCode())
+				.message(message)
+				.build())
+			.timestamp(LocalDateTime.now())
+			.build();
+	}
+
 	@Getter // Added
 	@Builder // Added
 	public static class Error {

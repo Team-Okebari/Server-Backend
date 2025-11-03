@@ -1,7 +1,5 @@
 package com.okebari.artbite.auth.service;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import jakarta.servlet.http.Cookie;
@@ -16,8 +14,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +24,7 @@ import com.okebari.artbite.auth.dto.LoginRequestDto;
 import com.okebari.artbite.auth.dto.SignupRequestDto;
 import com.okebari.artbite.auth.dto.TokenDto;
 import com.okebari.artbite.auth.jwt.JwtProvider;
+import com.okebari.artbite.auth.vo.CustomUserDetails;
 import com.okebari.artbite.common.exception.EmailAlreadyExistsException;
 import com.okebari.artbite.common.exception.InvalidTokenException;
 import com.okebari.artbite.common.exception.UserNotFoundException;
@@ -150,10 +147,13 @@ public class AuthService {
 			throw new InvalidTokenException("토큰 버전이 일치하지 않아 Refresh Token이 무효화되었습니다. 재로그인하십시오.");
 		}
 
-		// 5. 새로운 Access Token 생성
-		Collection<? extends GrantedAuthority> authorities = List.of(
-			new SimpleGrantedAuthority(user.getRole().getKey()));
-		Authentication authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
+		// CustomUserDetails를 사용하여 권한을 설정하는 새로운 코드
+		CustomUserDetails customUserDetails = new CustomUserDetails(user);
+		Authentication authentication = new UsernamePasswordAuthenticationToken(
+			customUserDetails.getUsername(),
+			null, // 토큰 재발급에는 비밀번호가 필요하지 않습니다.
+			customUserDetails.getAuthorities()
+		);
 		String newAccessToken = jwtProvider.createToken(authentication);
 
 		// 6. 새로운 Refresh Token 발급

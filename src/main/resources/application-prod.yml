@@ -17,3 +17,10 @@ cors:
 jwt:
   access-token-expire-time: ${JWT_ACCESS_TOKEN_EXPIRE_TIME}
   refresh-token-expire-time: ${JWT_REFRESH_TOKEN_EXPIRE_TIME}
+
+payment:
+  toss:
+    test_client_api_key: ${TOSS_PAYMENTS_TEST_CLIENT_API_KEY}
+    test_secret_api_key: ${TOSS_PAYMENTS_TEST_SECRET_API_KEY}
+    success_url: "http://localhost:8080/api/payments/toss/success"
+    fail_url: "http://localhost:8080/api/payments/toss/fail"

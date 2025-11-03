@@ -23,7 +23,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 	@Transactional(readOnly = true)
 	@Cacheable(value = "userDetails", key = "#email")
 	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-		User user = userRepository.findByEmail(email)
+		User user = userRepository.findByEmailWithMemberships(email)
 			.orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
 		return new CustomUserDetails(user);
 	}

@@ -39,3 +39,10 @@ logging:
     com.okebari.artbite: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+payment:
+  toss:
+    test_client_api_key: test_client_api_key
+    test_secret_api_key: test_secret_api_key
+    success_url: "http://localhost:8080/api/payments/toss/success"
+    fail_url: "http://localhost:8080/api/payments/toss/fail"

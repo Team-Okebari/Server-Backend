@@ -6,6 +6,7 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -59,6 +60,19 @@ public class GlobalExceptionHandler {
 			.body(CustomApiResponse.error(ErrorCode.AUTH_INVALID_CREDENTIALS, ex.getMessage()));
 	}
 
+	@ExceptionHandler(AuthorizationDeniedException.class)
+	public ResponseEntity<CustomApiResponse<?>> handleAuthorizationDeniedException(
+		AuthorizationDeniedException ex) {
+		log.error("AuthorizationDeniedException occurred: {}", ex.getMessage(), ex);
+		HttpHeaders headers = new HttpHeaders();
+		headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+		return ResponseEntity
+			.status(HttpStatus.FORBIDDEN)
+			.headers(headers)
+			.body(CustomApiResponse.error(ErrorCode.COMMON_FORBIDDEN));
+	}
+
+	// 모든 예상치 못한 예외 처리
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<CustomApiResponse<?>> handleAllExceptions(Exception ex) {
 		log.error("An unexpected error occurred: {}", ex.getMessage(), ex);
