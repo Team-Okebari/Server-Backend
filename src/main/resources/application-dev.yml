@@ -12,7 +12,7 @@ security:
   whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /swagger-ui/**, /v3/api-docs/**, /swagger-resources/**, /webjars/**, /login-test-page
 
 cors:
-  allowed-origins: ${CORS_URL:-http://localhost:3000}
+  allowed-origins: ${CORS_URL:-http://localhost:5173}
 
 jwt:
   access-token-expire-time: ${JWT_ACCESS_TOKEN_EXPIRE_TIME}

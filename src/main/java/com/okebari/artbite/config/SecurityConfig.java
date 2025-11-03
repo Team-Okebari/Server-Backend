@@ -71,7 +71,7 @@ public class SecurityConfig {
 			)
 			.logout(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(authorize -> authorize
-				.requestMatchers(whitelistedPaths).permitAll() //application-local.yml에서 화이트리스트 관리
+				.requestMatchers(whitelistedPaths).permitAll() //application-*.yml에서 화이트리스트 관리
 				.anyRequest().authenticated()
 			)
 			.oauth2Login(oauth2 -> oauth2
