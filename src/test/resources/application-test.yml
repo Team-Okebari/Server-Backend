@@ -24,7 +24,7 @@ spring:
             client-secret: "test-naver-client-secret"
 
 security:
-  whitelisted-paths: /api/auth/**, /oauth2/**, /login/oauth2/code/**
+  whitelisted-paths: /api/auth/**, /oauth2/**, /login/oauth2/code/**, /api/payments/toss/success, /api/payments/toss/fail
 
 cors:
   allowed-origins: http://localhost:3000
@@ -46,3 +46,6 @@ payment:
     test_secret_api_key: test_secret_api_key
     success_url: "http://localhost:8080/api/payments/toss/success"
     fail_url: "http://localhost:8080/api/payments/toss/fail"
+    membership_amount: 1500
+    frontend_success_url: "/payment/success"
+    frontend_fail_url: "/payment/fail"

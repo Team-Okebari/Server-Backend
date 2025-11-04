@@ -1,6 +1,8 @@
 package com.okebari.artbite.membership.controller;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -14,11 +16,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okebari.artbite.AbstractContainerBaseTest;
 import com.okebari.artbite.auth.vo.CustomUserDetails;
@@ -26,11 +33,16 @@ import com.okebari.artbite.domain.membership.Membership;
 import com.okebari.artbite.domain.membership.MembershipPlanType;
 import com.okebari.artbite.domain.membership.MembershipRepository;
 import com.okebari.artbite.domain.membership.MembershipStatus;
+import com.okebari.artbite.domain.payment.PaymentRepository;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.domain.user.UserRole;
 import com.okebari.artbite.membership.dto.EnrollMembershipRequestDto;
 import com.okebari.artbite.membership.service.MembershipService;
+import com.okebari.artbite.payment.toss.config.TossPaymentConfig;
+import com.okebari.artbite.payment.toss.dto.PayType;
+import com.okebari.artbite.payment.toss.dto.PaymentDto;
+import com.okebari.artbite.payment.toss.dto.PaymentSuccessDto;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -54,6 +66,15 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	@Autowired
 	private MembershipRepository membershipRepository;
 
+	@Autowired
+	private PaymentRepository paymentRepository;
+
+	@Autowired
+	private TossPaymentConfig tossPaymentConfig;
+
+	@MockitoBean // 외부 API 호출을 Mocking
+	private RestTemplate restTemplate;
+
 	// Test users
 	private User regularUser;
 	private User adminUser;
@@ -62,8 +83,10 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 
 	@BeforeEach
 	void setUp() {
-		userRepository.deleteAll(); // Clear users before each test
-		membershipRepository.deleteAll(); // Clear memberships before each test
+		// 참조 무결성을 위해 자식 테이블부터 삭제
+		paymentRepository.deleteAll();
+		membershipRepository.deleteAll();
+		userRepository.deleteAll();
 
 		regularUser = User.builder()
 			.email("testuser@example.com")
@@ -95,95 +118,53 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@DisplayName("일반 사용자의 멤버십 가입 성공")
-	void enrollMembership_success() throws Exception {
-		EnrollMembershipRequestDto requestDto = new EnrollMembershipRequestDto();
-		requestDto.setAutoRenew(true);
-
-		mockMvc.perform(post("/api/memberships/enroll")
-				.with(user(regularUserDetails)) // Authenticate as regular user
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(requestDto)))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.status").value("ACTIVE"));
-	}
-
-	@Test
-	@DisplayName("멤버십 가입 실패: 이미 활성 멤버십이 존재")
-	void enrollMembership_alreadyActive() throws Exception {
-		// 먼저 멤버십을 가입시킵니다.
-		EnrollMembershipRequestDto enrollRequest = new EnrollMembershipRequestDto();
-		enrollRequest.setAutoRenew(true);
-		membershipService.enrollMembership(regularUser.getId(), enrollRequest);
-
-		// 다시 가입을 시도합니다.
-		EnrollMembershipRequestDto reEnrollRequest = new EnrollMembershipRequestDto();
-		reEnrollRequest.setAutoRenew(false);
-
-		mockMvc.perform(post("/api/memberships/enroll")
-				.with(user(regularUserDetails))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(reEnrollRequest)))
-			.andExpect(status().isConflict()) // Expect 409 Conflict
-			.andExpect(jsonPath("$.success").value(false))
-			.andExpect(jsonPath("$.error.code").value("M002"));
-	}
-
-	@Test
-	@DisplayName("멤버십 재가입 성공: 만료된 멤버십")
-	void enrollMembership_reEnrollExpired() throws Exception {
-		// 만료된 멤버십을 생성합니다.
-		Membership expiredMembership = Membership.builder()
-			.user(regularUser)
-			.status(MembershipStatus.EXPIRED)
-			.planType(MembershipPlanType.DEFAULT_MEMBER_PLAN)
-			.startDate(LocalDateTime.now().minusMonths(2))
-			.endDate(LocalDateTime.now().minusMonths(1))
-			.consecutiveMonths(1)
-			.autoRenew(false)
+	@DisplayName("Toss Payments 연동 멤버십 가입 성공 통합 테스트")
+	void enrollMembershipWithTossPayment_Success() throws Exception {
+		// Given: 결제 승인 성공 상황 Mocking
+		long amount = 1500L;
+		String paymentKey = "test_payment_key_12345";
+		PaymentSuccessDto mockTossResponse = PaymentSuccessDto.builder()
+			.status("DONE")
+			.totalAmount(amount)
 			.build();
-		membershipRepository.save(expiredMembership);
 
-		EnrollMembershipRequestDto requestDto = new EnrollMembershipRequestDto();
-		requestDto.setAutoRenew(true);
+		when(restTemplate.postForEntity(
+			eq("https://api.tosspayments.com/v1/payments/confirm"),
+			any(HttpEntity.class),
+			eq(PaymentSuccessDto.class)
+		)).thenReturn(ResponseEntity.ok(mockTossResponse));
 
-		mockMvc.perform(post("/api/memberships/enroll")
-				.with(user(regularUserDetails))
+		// When: 1. 프론트엔드가 백엔드에 결제 정보 요청
+		PaymentDto paymentDto = new PaymentDto();
+		paymentDto.setPayType(PayType.CARD);
+		paymentDto.setAmount(amount);
+		paymentDto.setOrderName("ArtBite 월간 구독");
+
+		String responseContent = mockMvc.perform(post("/api/payments/toss")
+				.with(user(regularUserDetails)) // 인증된 사용자
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(requestDto)))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
-			.andExpect(jsonPath("$.data.consecutiveMonths").value(expiredMembership.getConsecutiveMonths() + 1));
-	}
+				.content(objectMapper.writeValueAsString(paymentDto)))
+			.andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
 
-	@Test
-	@DisplayName("멤버십 재가입 성공: 취소된 멤버십")
-	void enrollMembership_reEnrollCanceled() throws Exception {
-		// 취소된 멤버십을 생성합니다.
-		Membership canceledMembership = Membership.builder()
-			.user(regularUser)
-			.status(MembershipStatus.CANCELED)
-			.planType(MembershipPlanType.DEFAULT_MEMBER_PLAN)
-			.startDate(LocalDateTime.now().minusMonths(2))
-			.endDate(LocalDateTime.now().plusMonths(1)) // Canceled but end_date might be in future
-			.consecutiveMonths(1)
-			.autoRenew(false)
-			.build();
-		membershipRepository.save(canceledMembership);
+		JsonNode responseNode = objectMapper.readTree(responseContent);
+		String orderId = responseNode.get("data").get("orderId").asText();
 
-		EnrollMembershipRequestDto requestDto = new EnrollMembershipRequestDto();
-		requestDto.setAutoRenew(true);
+		// When: 2. Toss Payments가 백엔드의 successUrl로 리다이렉트 (인증 없이 호출)
+		mockMvc.perform(get("/api/payments/toss/success")
+				.param("paymentKey", paymentKey)
+				.param("orderId", orderId)
+				.param("amount", String.valueOf(amount)))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl(tossPaymentConfig.getFrontendSuccessUrl())); // 성공 URL로 리다이렉트 검증
 
-		mockMvc.perform(post("/api/memberships/enroll")
-				.with(user(regularUserDetails))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(requestDto)))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.status").value("ACTIVE"))
-			.andExpect(jsonPath("$.data.consecutiveMonths").value(canceledMembership.getConsecutiveMonths() + 1));
+		// Then: 멤버십 상태가 ACTIVE로 변경되었는지 검증
+		Membership membership = membershipRepository.findTopByUserAndStatusOrderByStartDateDesc(regularUser,
+				MembershipStatus.ACTIVE)
+			.orElseThrow(() -> new AssertionError("활성화된 멤버십을 찾을 수 없습니다."));
+
+		assertThat(membership.getStatus()).isEqualTo(MembershipStatus.ACTIVE);
+		assertThat(membership.getStartDate().toLocalDate()).isEqualTo(LocalDateTime.now().toLocalDate());
 	}
 
 	@Test

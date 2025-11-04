@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MembershipStatus {
 	ACTIVE("활성"),
-	PENDING_PAYMENT("결제 대기중"), // Add PENDING_PAYMENT
 	CANCELED("취소됨"),
 	EXPIRED("만료됨"),
 	BANNED("정지됨");
