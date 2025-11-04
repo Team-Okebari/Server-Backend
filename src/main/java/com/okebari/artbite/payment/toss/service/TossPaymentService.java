@@ -54,11 +54,16 @@ public class TossPaymentService {
 			throw new BusinessException(ErrorCode.PAYMENT_AMOUNT_MISMATCH, "구독 금액이 올바르지 않습니다.");
 		}
 
+		// orderName이 비어있을 경우 설정 파일의 기본값을 사용
+		String orderName = (paymentDto.getOrderName() == null || paymentDto.getOrderName().isBlank())
+			? tossPaymentConfig.getOrderName()
+			: paymentDto.getOrderName();
+
 		Payment payment = Payment.builder()
 			.user(user)
 			.payType(paymentDto.getPayType())
 			.amount(paymentDto.getAmount())
-			.orderName(paymentDto.getOrderName())
+			.orderName(orderName)
 			.orderId(UUID.randomUUID().toString()) // 고유한 주문 ID 생성
 			.paySuccessYN(false) // 초기에는 결제 미승인 상태
 			.build();
@@ -66,21 +71,45 @@ public class TossPaymentService {
 		return paymentRepository.save(payment);
 	}
 
-	@Transactional
 	public PaymentSuccessDto confirmPayment(String paymentKey, String orderId, Long amount) {
 		Payment payment = verifyPayment(orderId, amount); // 금액 검증
 
-		PaymentSuccessDto tossPaymentResponse = requestPaymentAccept(paymentKey, orderId,
-			amount); // Toss API 호출 및 응답 파싱
+		// 멱등성 체크: 이미 결제가 성공적으로 처리되었다면 중복 실행을 방지.
+		if (payment.isPaySuccessYN()) {
+			log.warn("이미 처리된 결제입니다. orderId: {}", orderId);
+			// 여기서 이미 저장된 결제 성공 정보를 바탕으로 PaymentSuccessDto를 재구성하거나,
+			// 간단하게 성공했다는 응답을 보낼 수 있습니다. Toss의 응답을 재현하기는 어려우므로,
+			// 클라이언트가 오해하지 않도록 명확한 응답을 주는 것이 좋습니다.
+			// 여기서는 예외를 발생시켜 클라이언트에게 이미 처리되었음을 명확히 알립니다.
+			throw new BusinessException(ErrorCode.PAYMENT_ALREADY_PROCESSED);
+		}
 
-		// 5. 결제 성공 시 DB 업데이트
+		// 1. Toss Payments 결제 승인 API 호출 (트랜잭션 외부에서 실행)
+		PaymentSuccessDto tossPaymentResponse = requestPaymentAccept(paymentKey, orderId, amount);
+
+		// 2. DB 업데이트 로직을 별도의 트랜잭션 메소드로 호출
+		// 만약 여기서 예외가 발생하면, Toss 결제는 이미 완료되었으므로,
+		// 해당 오류를 로깅하고 개발자가 수동으로 처리해야 하는 심각한 상황입니다.
+		// (고도화: 재시도 큐에 넣는 방식 등)
+		processPaymentSuccess(payment, paymentKey);
+
+		return tossPaymentResponse;
+	}
+
+	/**
+	 * 결제 성공 후 DB 상태를 업데이트하고 멤버십을 활성화하는 트랜잭션 메소드입니다.
+	 * Spring AOP가 트랜잭션을 적용할 수 있도록 public으로 선언되어야 합니다.
+	 * @param payment 결제 엔티티
+	 * @param paymentKey 토스 페이먼츠의 결제 키
+	 */
+	@Transactional
+	public void processPaymentSuccess(Payment payment, String paymentKey) {
+		// 결제 성공 시 DB 업데이트
 		payment.success(paymentKey);
 		paymentRepository.save(payment);
 
-		// 6. 멤버십 활성화 로직 호출
+		// 멤버십 활성화 로직 호출
 		membershipService.activateMembership(payment.getUser().getId(), payment.getAmount(), payment.getPayType());
-
-		return tossPaymentResponse;
 	}
 
 	@Transactional
@@ -122,7 +151,7 @@ public class TossPaymentService {
 		HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBodyMap, headers);
 		try {
 			ResponseEntity<PaymentSuccessDto> responseEntity = restTemplate.postForEntity(
-				tossPaymentConfig.URL + "confirm",
+				tossPaymentConfig.getUrl() + "confirm",
 				requestEntity,
 				PaymentSuccessDto.class
 			);
@@ -167,7 +196,7 @@ public class TossPaymentService {
 
 		try {
 			ResponseEntity<PaymentSuccessDto> responseEntity = restTemplate.postForEntity(
-				TossPaymentConfig.URL + paymentKey + "/cancel",
+				tossPaymentConfig.getUrl() + paymentKey + "/cancel",
 				requestEntity,
 				PaymentSuccessDto.class
 			);

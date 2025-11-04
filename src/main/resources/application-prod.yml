@@ -27,3 +27,10 @@ payment:
     membership_amount: 1500 # 월간 구독 금액
     frontend_success_url: "/payment/success" # 프론트엔드 성공 경로
     frontend_fail_url: "/payment/fail" # 프론트엔드 실패 경로
+    url: "https://api.tosspayments.com/v1/payments/"
+    order-name: "ArtBite 월간 구독"
+
+membership:
+  default-plan-type: DEFAULT_MEMBER_PLAN
+  default-duration-months: 1
+  default-auto-renew: true

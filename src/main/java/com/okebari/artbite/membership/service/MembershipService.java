@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,7 +16,6 @@ import com.okebari.artbite.domain.membership.MembershipRepository;
 import com.okebari.artbite.domain.membership.MembershipStatus;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
-import com.okebari.artbite.membership.dto.EnrollMembershipRequestDto;
 import com.okebari.artbite.membership.dto.MembershipStatusResponseDto;
 import com.okebari.artbite.payment.toss.dto.PayType;
 
@@ -30,16 +30,14 @@ public class MembershipService {
 	private final MembershipRepository membershipRepository;
 	private final UserRepository userRepository;
 
-	// 기존 enrollMembership은 결제 전 요청을 처리하도록 변경하거나 제거될 수 있음
-	// 현재는 임시로 남겨두고 activateMembership을 추가
-	@Transactional
-	public MembershipStatusResponseDto enrollMembership(Long userId, EnrollMembershipRequestDto requestDto) {
-		// 이 메서드는 이제 결제 로직을 직접 수행하지 않고, 결제 서비스에서 호출될 activateMembership을 준비하는 역할로 변경될 수 있습니다.
-		// 또는 이 엔드포인트 자체가 결제 전 주문 생성 역할로 변경될 수 있습니다.
-		// 현재는 기존 로직을 유지하되, 실제 결제는 TossPaymentService에서 처리하도록 합니다.
-		// TODO: 이 메서드의 역할 재정의 필요 (결제 전 주문 생성 또는 제거)
-		return activateMembership(userId, 0L, PayType.CARD); // 임시 호출, 실제 결제 금액과 타입은 TossPaymentService에서 전달
-	}
+	@Value("${membership.default-plan-type}")
+	private String defaultPlanType;
+
+	@Value("${membership.default-duration-months}")
+	private int defaultDurationMonths;
+
+	@Value("${membership.default-auto-renew}")
+	private boolean defaultAutoRenew;
 
 	@Transactional
 	public MembershipStatusResponseDto activateMembership(Long userId, Long amount, PayType payType) {
@@ -59,22 +57,22 @@ public class MembershipService {
 
 		Membership membership;
 		LocalDateTime now = LocalDateTime.now().toLocalDate().atStartOfDay();
-		LocalDateTime endDate = now.plusMonths(1).toLocalDate().atStartOfDay(); // 기본 1개월 멤버십, 다음 달 00시 00분으로 설정
+		LocalDateTime endDate = now.plusMonths(defaultDurationMonths).toLocalDate().atStartOfDay();
 
 		if (existingMembership.isPresent()) {
 			membership = existingMembership.get();
 			// 기존 멤버십 업데이트
-			membership.activate(now, endDate, membership.getConsecutiveMonths() + 1, true); // 자동 갱신 여부는 결제 시점에 결정
+			membership.activate(now, endDate, membership.getConsecutiveMonths() + 1, defaultAutoRenew);
 		} else {
 			// 새 멤버십 생성
 			membership = Membership.builder()
 				.user(user)
 				.status(MembershipStatus.ACTIVE)
-				.planType(MembershipPlanType.DEFAULT_MEMBER_PLAN)
+				.planType(MembershipPlanType.valueOf(defaultPlanType))
 				.startDate(now)
 				.endDate(endDate)
 				.consecutiveMonths(1)
-				.autoRenew(true) // 자동 갱신 여부는 결제 시점에 결정
+				.autoRenew(defaultAutoRenew)
 				.build();
 		}
 

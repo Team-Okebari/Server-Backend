@@ -6,8 +6,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.client.RestTemplate;
 
+import com.okebari.artbite.payment.toss.config.TossPaymentConfig;
+
 @Configuration
 public class AppConfig {
+
+	private final TossPaymentConfig tossPaymentConfig;
+
+	public AppConfig(TossPaymentConfig tossPaymentConfig) {
+		this.tossPaymentConfig = tossPaymentConfig;
+	}
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {

@@ -37,7 +37,6 @@ import com.okebari.artbite.domain.payment.PaymentRepository;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.domain.user.UserRole;
-import com.okebari.artbite.membership.dto.EnrollMembershipRequestDto;
 import com.okebari.artbite.membership.service.MembershipService;
 import com.okebari.artbite.payment.toss.config.TossPaymentConfig;
 import com.okebari.artbite.payment.toss.dto.PayType;
@@ -171,9 +170,7 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("멤버십 취소 성공")
 	void cancelMembership_success() throws Exception {
 		// 먼저 활성 멤버십을 생성합니다.
-		EnrollMembershipRequestDto enrollRequest = new EnrollMembershipRequestDto();
-		enrollRequest.setAutoRenew(true);
-		membershipService.enrollMembership(regularUser.getId(), enrollRequest);
+		membershipService.activateMembership(regularUser.getId(), 1500L, PayType.CARD);
 
 		transactionTemplate.execute(txStatus -> {
 			try {
@@ -216,9 +213,7 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("멤버십 상태 조회 성공: 활성 멤버십")
 	void getMembershipStatus_active() throws Exception {
 		// 활성 멤버십 생성
-		membershipService.enrollMembership(regularUser.getId(), new EnrollMembershipRequestDto() {{
-			setAutoRenew(true);
-		}});
+		membershipService.activateMembership(regularUser.getId(), 1500L, PayType.CARD);
 
 		mockMvc.perform(get("/api/memberships/status")
 				.with(user(regularUserDetails)))
@@ -297,9 +292,7 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("관리자의 멤버십 정지 성공")
 	void banMembership_success() throws Exception {
 		// 활성 멤버십 생성
-		membershipService.enrollMembership(regularUser.getId(), new EnrollMembershipRequestDto() {{
-			setAutoRenew(true);
-		}});
+		membershipService.activateMembership(regularUser.getId(), 1500L, PayType.CARD);
 
 		mockMvc.perform(post("/api/memberships/{userId}/ban", regularUser.getId())
 				.with(user(adminUserDetails))) // Authenticate as admin
@@ -317,9 +310,7 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("일반 사용자의 멤버십 정지 실패: 권한 없음")
 	void banMembership_unauthorized() throws Exception {
 		// 활성 멤버십 생성
-		membershipService.enrollMembership(regularUser.getId(), new EnrollMembershipRequestDto() {{
-			setAutoRenew(true);
-		}});
+		membershipService.activateMembership(regularUser.getId(), 1500L, PayType.CARD);
 
 		mockMvc.perform(post("/api/memberships/{userId}/ban", regularUser.getId())
 				.with(user(regularUserDetails))) // Authenticate as regular user
