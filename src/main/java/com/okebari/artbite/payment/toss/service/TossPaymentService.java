@@ -56,34 +56,29 @@ public class TossPaymentService {
 		User user = userRepository.findByEmail(userEmail)
 			.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_USER_NOT_FOUND));
 
-		// Check if the user already has an ACTIVE membership of the requested type
 		membershipRepository.findByUserAndStatusAndPlanType(user, MembershipStatus.ACTIVE,
 				paymentDto.getMembershipPlanType())
 			.ifPresent(membership -> {
 				throw new BusinessException(ErrorCode.MEMBERSHIP_ALREADY_ACTIVE);
 			});
 
-		// Check if the user has a CANCELED membership of the requested type
 		membershipRepository.findByUserAndStatusAndPlanType(user, MembershipStatus.CANCELED,
 				paymentDto.getMembershipPlanType())
 			.ifPresent(membership -> {
 				throw new BusinessException(ErrorCode.MEMBERSHIP_CANCELED_CANNOT_RENEW);
 			});
 
-		// Check if the user has a BANNED membership of the requested type
 		membershipRepository.findByUserAndStatusAndPlanType(user, MembershipStatus.BANNED,
 				paymentDto.getMembershipPlanType())
 			.ifPresent(membership -> {
 				throw new BusinessException(ErrorCode.MEMBERSHIP_BANNED);
 			});
 
-		// 멤버십 플랜 타입에 따른 금액 검증
 		Long expectedAmount = paymentDto.getMembershipPlanType().getAmount();
 		if (!paymentDto.getAmount().equals(expectedAmount)) {
 			throw new BusinessException(ErrorCode.PAYMENT_AMOUNT_MISMATCH, "요청된 결제 금액이 멤버십 플랜의 금액과 일치하지 않습니다.");
 		}
 
-		// orderName이 비어있을 경우 설정 파일의 기본값을 사용
 		String orderName = (paymentDto.getOrderName() == null || paymentDto.getOrderName().isBlank())
 			? tossPaymentConfig.getOrderName()
 			: paymentDto.getOrderName();
@@ -93,33 +88,23 @@ public class TossPaymentService {
 			.payType(paymentDto.getPayType())
 			.amount(paymentDto.getAmount())
 			.orderName(orderName)
-			.orderId(UUID.randomUUID().toString()) // 고유한 주문 ID 생성
-			.status(PaymentStatus.READY) // 초기에는 결제 대기 상태
+			.orderId(UUID.randomUUID().toString())
+			.status(PaymentStatus.READY)
 			.build();
 
 		return paymentRepository.save(payment);
 	}
 
 	public PaymentSuccessDto confirmPayment(String paymentKey, String orderId, Long amount) {
-		Payment payment = verifyPayment(orderId, amount); // 금액 검증
+		Payment payment = verifyPayment(orderId, amount);
 
-		// 멱등성 체크: 이미 결제가 성공적으로 처리되었다면 중복 실행을 방지.
 		if (payment.getStatus() == PaymentStatus.SUCCESS) {
 			log.warn("이미 처리된 결제입니다. orderId: {}", orderId);
-			// 여기서 이미 저장된 결제 성공 정보를 바탕으로 PaymentSuccessDto를 재구성하거나,
-			// 간단하게 성공했다는 응답을 보낼 수 있습니다. Toss의 응답을 재현하기는 어려우므로,
-			// 클라이언트가 오해하지 않도록 명확한 응답을 주는 것이 좋습니다.
-			// 여기서는 예외를 발생시켜 클라이언트에게 이미 처리되었음을 명확히 알립니다.
 			throw new BusinessException(ErrorCode.PAYMENT_ALREADY_PROCESSED);
 		}
 
-		// 1. Toss Payments 결제 승인 API 호출 (트랜잭션 외부에서 실행)
 		PaymentSuccessDto tossPaymentResponse = requestPaymentAccept(paymentKey, orderId, amount);
 
-		// 2. DB 업데이트 로직을 별도의 트랜잭션 메소드로 호출
-		// 만약 여기서 예외가 발생하면, Toss 결제는 이미 완료되었으므로,
-		// 해당 오류를 로깅하고 개발자가 수동으로 처리해야 하는 심각한 상황입니다.
-		// (고도화: 재시도 큐에 넣는 방식 등)
 		processPaymentSuccess(payment, paymentKey);
 
 		return tossPaymentResponse;
@@ -133,20 +118,16 @@ public class TossPaymentService {
 	 */
 	@Transactional
 	public void processPaymentSuccess(Payment payment, String paymentKey) {
-		// 결제 성공 시 DB 업데이트
 		payment.success(paymentKey);
 		paymentRepository.save(payment);
 
 		try {
-			// 멤버십 활성화 로직 호출
 			membershipService.activateMembership(payment.getUser().getId(), payment.getAmount(), payment.getPayType());
 		} catch (Exception e) {
 			log.error("멤버십 활성화 중 오류 발생: paymentId={}, userId={}, error={}", payment.getId(),
 				payment.getUser().getId(), e.getMessage(), e);
 			payment.processingFailed(e.getMessage());
 			paymentRepository.save(payment);
-			// 이 시점에서 클라이언트에게는 결제 성공으로 응답이 갔을 것이므로,
-			// 이 오류는 별도의 모니터링 및 수동 처리가 필요합니다.
 			throw new BusinessException(ErrorCode.MEMBERSHIP_ACTIVATION_FAILED,
 				"결제는 성공했으나 멤버십 활성화에 실패했습니다. 관리자에게 문의하세요.");
 		}
@@ -212,19 +193,8 @@ public class TossPaymentService {
 
 	@Transactional
 	public PaymentSuccessDto cancelPayment(String userEmail, String paymentKey, String cancelReason) {
-		Payment payment = paymentRepository.findByPaymentKeyAndUserEmail(paymentKey, userEmail)
-			.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_PAYMENT, "결제 정보를 찾을 수 없거나 취소 권한이 없습니다."));
-
-		// Toss Payments API 호출
-		PaymentSuccessDto tossCancelResponse = requestTossCancelApi(paymentKey, cancelReason);
-
-		// DB에 취소 상태 업데이트
-		payment.cancel(cancelReason);
-		paymentRepository.save(payment);
-
-		// TODO: 포인트 관련 로직이 있다면 여기서 처리. (현재는 멤버십 모델이므로 생략)
-
-		return tossCancelResponse;
+		// 환불 기능은 현재 일시적으로 비활성화되어 있습니다.
+		throw new BusinessException(ErrorCode.REFUND_TEMPORARILY_DISABLED);
 	}
 
 	private PaymentSuccessDto requestTossCancelApi(String paymentKey, String cancelReason) {

@@ -61,8 +61,6 @@ public class AuthController {
 			try {
 				userEmail = jwtProvider.getAuthentication(accessToken).getName();
 			} catch (Exception e) {
-				// It's okay if we can't get the email, just log it.
-				// The main goal is to invalidate the refresh token.
 			}
 		}
 

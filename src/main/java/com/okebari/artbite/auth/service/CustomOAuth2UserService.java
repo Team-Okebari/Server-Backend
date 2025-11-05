@@ -2,10 +2,8 @@ package com.okebari.artbite.auth.service;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
@@ -17,9 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.okebari.artbite.auth.dto.OAuthAttributes;
 import com.okebari.artbite.domain.user.User;
-import com.okebari.artbite.domain.user.UserRepository;
-import com.okebari.artbite.domain.user.UserSocialLogin;
-import com.okebari.artbite.domain.user.UserSocialLoginRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
-	private final SocialAuthService socialAuthService; // Injected SocialAuthService
+	private final SocialAuthService socialAuthService;
 
 	@Override
 	@Transactional
@@ -55,6 +50,5 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 			attributes.attributes(),
 			attributes.nameAttributeKey());
 	}
-
 
 }

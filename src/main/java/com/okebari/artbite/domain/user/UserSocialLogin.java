@@ -35,7 +35,7 @@ public class UserSocialLogin {
 	private String provider; // google, kakao, naver
 
 	@Column(nullable = false, length = 255)
-	private String providerId; // ID from the social provider
+	private String providerId; // 소셜 제공자로부터 받은 ID
 
 	@Builder
 	public UserSocialLogin(User user, String provider, String providerId) {

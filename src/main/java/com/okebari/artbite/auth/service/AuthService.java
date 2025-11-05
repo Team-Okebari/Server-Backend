@@ -41,13 +41,13 @@ public class AuthService {
 	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 	private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
 	private final UserRepository userRepository;
-	private final SocialAuthService socialAuthService; // Injected SocialAuthService
+	private final SocialAuthService socialAuthService;
 	private final PasswordEncoder passwordEncoder;
 	@Lazy
 	private final AuthenticationManager authenticationManager;
 	private final JwtProvider jwtProvider;
-	private final RefreshTokenService refreshTokenService; // Injected
-	private final RedisTemplate<String, String> redisTemplate; // Inject RedisTemplate
+	private final RefreshTokenService refreshTokenService;
+	private final RedisTemplate<String, String> redisTemplate;
 
 	@Transactional
 	public Long signup(SignupRequestDto signupRequestDto) {
@@ -75,7 +75,6 @@ public class AuthService {
 				new UsernamePasswordAuthenticationToken(loginRequestDto.getEmail(), loginRequestDto.getPassword())
 			);
 
-			// Load the User entity to pass to RefreshTokenService
 			User user = userRepository.findByEmail(authentication.getName())
 				.orElseThrow(UserNotFoundException::new);
 
@@ -199,7 +198,6 @@ public class AuthService {
 			// 3. Refresh Token 쿠키 삭제
 			deleteRefreshTokenCookie(response);
 
-			// Delegate social logout URL construction to SocialAuthService
 			return socialAuthService.getSocialLogoutRedirectUrl(userEmail);
 		}
 	}
@@ -214,7 +212,7 @@ public class AuthService {
 	}
 
 	public void addAccessTokenCookie(HttpServletResponse response, String accessToken) {
-		Cookie cookie = new Cookie("accessToken", accessToken); // Access Token 쿠키 이름은 "accessToken"으로 가정
+		Cookie cookie = new Cookie("accessToken", accessToken);
 		cookie.setHttpOnly(true);
 		cookie.setSecure(true); // HTTPS 사용 시
 		cookie.setPath("/"); // 모든 경로에서 접근 가능

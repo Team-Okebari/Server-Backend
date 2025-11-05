@@ -3,7 +3,6 @@ package com.okebari.artbite.auth.handler;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -27,7 +26,6 @@ import com.okebari.artbite.auth.jwt.JwtProvider;
 import com.okebari.artbite.auth.service.RefreshTokenService;
 import com.okebari.artbite.auth.service.SocialAuthService;
 import com.okebari.artbite.domain.user.User;
-import com.okebari.artbite.domain.user.UserSocialLogin;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +38,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
 	private final JwtProvider jwtProvider;
 	private final RefreshTokenService refreshTokenService;
-	private final SocialAuthService socialAuthService; // Injected SocialAuthService
+	private final SocialAuthService socialAuthService;
 	private final ObjectMapper objectMapper;
 
 	@Value("${oauth2.redirect-uri.success}")
@@ -64,18 +62,16 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
 		User user = socialAuthService.saveOrUpdate(attributes);
 
-		sendTokenResponse(user, registrationId, response, request); // Pass request as well
+		sendTokenResponse(user, registrationId, response, request);
 	}
-
-
 
 	private void sendTokenResponse(User user, String registrationId, HttpServletResponse response,
 		HttpServletRequest request) throws IOException {
 		// User 엔티티를 기반으로 OAuth2User principal 생성
 		OAuth2User oauth2UserPrincipal = new DefaultOAuth2User(
 			Collections.singleton(new SimpleGrantedAuthority(user.getRole().getKey())),
-			Map.of("email", user.getEmail(), "name", user.getUsername()), // 최소한의 속성
-			"email" // nameAttributeKey
+			Map.of("email", user.getEmail(), "name", user.getUsername()),
+			"email"
 		);
 
 		Authentication auth = new OAuth2AuthenticationToken(
@@ -108,8 +104,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 	}
 
 	private String getUserNameAttributeName(String registrationId) {
-		// application-oauth2.yml에 설정된 user-name-attribute를 가져오는 로직이 필요
-		// 여기서는 간단히 하드코딩하거나, ClientRegistrationRepository 등에서 가져와야 함
 		return switch (registrationId.toLowerCase()) {
 			case "google" -> "sub";
 			case "kakao" -> "id"; // 카카오는 user-name-attribute가 id

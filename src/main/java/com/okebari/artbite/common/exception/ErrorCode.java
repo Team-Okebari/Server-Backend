@@ -40,7 +40,8 @@ public enum ErrorCode {
 	FAILED_REFUND_PROCESS(HttpStatus.INTERNAL_SERVER_ERROR, "P005", "환불 처리 중 오류가 발생했습니다."),
 	PAYMENT_PENDING(HttpStatus.CONFLICT, "P006", "이미 결제 대기 중인 멤버십이 있습니다."),
 	PAYMENT_CONFIRM_FAILED(HttpStatus.BAD_REQUEST, "P007", "결제 승인에 실패했습니다."),
-	PAYMENT_ALREADY_PROCESSED(HttpStatus.CONFLICT, "P008", "이미 처리된 결제입니다.");
+	PAYMENT_ALREADY_PROCESSED(HttpStatus.CONFLICT, "P008", "이미 처리된 결제입니다."),
+	REFUND_TEMPORARILY_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "P009", "현재 환불 기능은 일시적으로 비활성화되어 있습니다. 관리자에게 문의해주세요.");
 
 	private final HttpStatus httpStatus;
 	private final String code;

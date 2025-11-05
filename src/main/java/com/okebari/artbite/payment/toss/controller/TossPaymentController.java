@@ -34,7 +34,7 @@ import com.okebari.artbite.payment.toss.service.TossPaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j // Added for logging
+@Slf4j
 @RestController
 @RequestMapping("/api/payments/toss")
 @RequiredArgsConstructor
