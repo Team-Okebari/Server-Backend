@@ -7,8 +7,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum PayType {
 	CARD("카드"),
-	CASH("현금"),
-	POINT("포인트");
+	VIRTUAL_ACCOUNT("가상계좌"),
+	TRANSFER("계좌이체"),
+	MOBILE_PHONE("휴대폰");
 
 	private final String description;
 }

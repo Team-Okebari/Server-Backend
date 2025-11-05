@@ -120,7 +120,7 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("Toss Payments 연동 멤버십 가입 성공 통합 테스트")
 	void enrollMembershipWithTossPayment_Success() throws Exception {
 		// Given: 결제 승인 성공 상황 Mocking
-		long amount = 1500L;
+		long amount = 5000L;
 		String paymentKey = "test_payment_key_12345";
 		PaymentSuccessDto mockTossResponse = PaymentSuccessDto.builder()
 			.status("DONE")
@@ -138,6 +138,7 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 		paymentDto.setPayType(PayType.CARD);
 		paymentDto.setAmount(amount);
 		paymentDto.setOrderName("ArtBite 월간 구독");
+		paymentDto.setMembershipPlanType(MembershipPlanType.DEFAULT_MEMBER_PLAN);
 
 		String responseContent = mockMvc.perform(post("/api/payments/toss")
 				.with(user(regularUserDetails)) // 인증된 사용자
@@ -158,12 +159,13 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 			.andExpect(redirectedUrl(tossPaymentConfig.getFrontendSuccessUrl())); // 성공 URL로 리다이렉트 검증
 
 		// Then: 멤버십 상태가 ACTIVE로 변경되었는지 검증
+		LocalDateTime expectedStartDate = LocalDateTime.now().toLocalDate().atStartOfDay();
 		Membership membership = membershipRepository.findTopByUserAndStatusOrderByStartDateDesc(regularUser,
 				MembershipStatus.ACTIVE)
 			.orElseThrow(() -> new AssertionError("활성화된 멤버십을 찾을 수 없습니다."));
 
 		assertThat(membership.getStatus()).isEqualTo(MembershipStatus.ACTIVE);
-		assertThat(membership.getStartDate().toLocalDate()).isEqualTo(LocalDateTime.now().toLocalDate());
+		assertThat(membership.getStartDate().toLocalDate()).isEqualTo(expectedStartDate.toLocalDate());
 	}
 
 	@Test

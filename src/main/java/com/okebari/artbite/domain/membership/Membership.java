@@ -47,8 +47,8 @@ public class Membership extends BaseTimeEntity {
 	@Column(nullable = false)
 	private LocalDateTime startDate;
 
-	@Column
-	private LocalDateTime endDate; // 계획에 따라 null 허용
+	@Column(nullable = false)
+	private LocalDateTime endDate;
 
 	@Column(nullable = false)
 	private int consecutiveMonths;
@@ -93,7 +93,7 @@ public class Membership extends BaseTimeEntity {
 	}
 
 	public void unban() {
-		this.status = MembershipStatus.EXPIRED; // 계획에 따라 밴 해제 시 EXPIRED로 설정
+		this.status = MembershipStatus.EXPIRED; // 현재 정책: 밴 해제 시 만료 상태로 전환하여 재활성화 필요. (향후 정책 변경 시 ACTIVE 등으로 변경 가능)
 	}
 
 	public void renew(LocalDateTime newEndDate, int newConsecutiveMonths) {

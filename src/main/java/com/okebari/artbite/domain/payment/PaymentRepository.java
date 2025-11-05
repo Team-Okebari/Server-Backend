@@ -1,5 +1,7 @@
 package com.okebari.artbite.domain.payment;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
@@ -15,5 +17,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	Optional<Payment> findByPaymentKeyAndUserEmail(String paymentKey, String email);
 
 	Slice<Payment> findAllByUserEmail(String email, Pageable pageable);
+
+	Slice<Payment> findAllByUserEmailAndStatus(String email, PaymentStatus status, Pageable pageable);
+
+	List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, LocalDateTime createdAt);
 
 }

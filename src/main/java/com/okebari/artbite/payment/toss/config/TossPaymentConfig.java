@@ -9,30 +9,40 @@ import lombok.Getter;
 @Getter
 public class TossPaymentConfig {
 
-	@Value("${payment.toss.url}")
-	private String url;
+	private final String url;
+	private final String testClientApiKey;
+	private final String testSecretKey;
+	private final String successUrl;
+	private final String failUrl;
+	private final Long membershipAmount;
+	private final String frontendSuccessUrl;
+	private final String frontendFailUrl;
+	private final String orderName;
+	private final int readyTimeoutMinutes;
+	private final long readyCheckIntervalMs;
 
-	@Value("${payment.toss.test_client_api_key}")
-	private String testClientApiKey;
-
-	@Value("${payment.toss.test_secret_api_key}")
-	private String testSecretKey;
-
-	@Value("${payment.toss.success_url}")
-	private String successUrl;
-
-	@Value("${payment.toss.fail_url}")
-	private String failUrl;
-
-	@Value("${payment.toss.membership_amount}")
-	private Long membershipAmount;
-
-	@Value("${payment.toss.frontend_success_url}")
-	private String frontendSuccessUrl;
-
-	@Value("${payment.toss.frontend_fail_url}")
-	private String frontendFailUrl;
-
-	@Value("${payment.toss.order-name}")
-	private String orderName;
+	public TossPaymentConfig(
+		@Value("${payment.toss.url}") String url,
+		@Value("${payment.toss.test_client_api_key}") String testClientApiKey,
+		@Value("${payment.toss.test_secret_api_key}") String testSecretKey,
+		@Value("${payment.toss.success_url}") String successUrl,
+		@Value("${payment.toss.fail_url}") String failUrl,
+		@Value("${payment.toss.membership_amount}") Long membershipAmount,
+		@Value("${payment.toss.frontend_success_url}") String frontendSuccessUrl,
+		@Value("${payment.toss.frontend_fail_url}") String frontendFailUrl,
+		@Value("${payment.toss.order-name}") String orderName,
+		@Value("${payment.toss.ready-timeout-minutes}") int readyTimeoutMinutes,
+		@Value("${payment.toss.ready-check-interval-ms}") long readyCheckIntervalMs) {
+		this.url = url;
+		this.testClientApiKey = testClientApiKey;
+		this.testSecretKey = testSecretKey;
+		this.successUrl = successUrl;
+		this.failUrl = failUrl;
+		this.membershipAmount = membershipAmount;
+		this.frontendSuccessUrl = frontendSuccessUrl;
+		this.frontendFailUrl = frontendFailUrl;
+		this.orderName = orderName;
+		this.readyTimeoutMinutes = readyTimeoutMinutes;
+		this.readyCheckIntervalMs = readyCheckIntervalMs;
+	}
 }

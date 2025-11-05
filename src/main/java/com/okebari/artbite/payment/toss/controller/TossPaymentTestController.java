@@ -40,6 +40,7 @@ public class TossPaymentTestController {
 			</head>
 			<body>
 			    <div class="container">
+			        <a href="/login-test-page" style="display: inline-block; margin-bottom: 20px; padding: 10px 15px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px;">로그인 테스트 페이지로 이동</a>
 			        <h1>Toss Payments 테스트</h1>
 			        <p><strong>주의:</strong> 이 페이지를 사용하려면 먼저 <a href="/login-test-page" target="_blank">인증 테스트 페이지</a>에서 로그인하여 Access Token을 발급받아야 합니다.</p>
 			
@@ -49,55 +50,99 @@ public class TossPaymentTestController {
 			        </div>
 			
 			        <div class="form-group">
+			            <label for="pay-type">결제 수단</label>
+			            <select id="pay-type">
+			                <option value="CARD" selected>카드</option>
+			                <option value="VIRTUAL_ACCOUNT">가상계좌</option>
+			                <option value="TRANSFER">계좌이체</option>
+			                <option value="MOBILE_PHONE">휴대폰</option>
+			            </select>
+			        </div>
+			
+			        <div class="form-group">
 			            <label for="order-name">주문명</label>
 			            <input type="text" id="order-name" value="테스트 멤버십">
 			        </div>
 			
 			        <div class="form-group">
-			            <label for="amount">결제 금액</label>
-			            <input type="number" id="amount" value="1500">
-			        </div>
+			            		            <label for="amount">결제 금액</label>
+			            		            <input type="number" id="amount" value="5000">
+			            		        </div>
 			
-			        <button id="payment-button">결제하기</button>
+			            		        			        <button id="payment-button">결제하기</button>
+			            		        
+			            		        			        <hr style="margin: 30px 0;">
+			            		        
+			            		        			        <h2>멤버십 액션</h2>
+			            		        			        <div class="action-buttons">
+			            		        			            <button id="cancel-membership-button" style="background-color: #dc3545;">멤버십 취소</button>
+			            		        			            <button id="reactivate-canceled-membership-button" style="background-color: #ffc107; color: #212529;">취소된 멤버십 재활성화</button>
+			            		        			        </div>
+			            		        
+			            		        			        <hr style="margin: 30px 0;">
+			            		        
+			            		        			        <h2>결제 취소</h2>
+			            		        			        <div class="form-group">
+			            		        			            <label for="payment-key-cancel">취소할 Payment Key</label>
+			            		        			            <input type="text" id="payment-key-cancel" placeholder="결제 성공 후 받은 paymentKey 입력">
+			            		        			        </div>
+			            		        			        <div class="form-group">
+			            		        			            <label for="cancel-reason">취소 사유</label>
+			            		        			            <input type="text" id="cancel-reason" value="테스트 취소">
+			            		        			        </div>
+			            		        			        <button id="cancel-payment-button" style="background-color: #6c757d;">결제 취소</button>
+			            		        
+			            		        			        <hr style="margin: 30px 0;">
+			            		        
+			            		        			        <h2>관리자 액션 (userId 필요)</h2>
+			            		        			        <div class="form-group">
+			            		        			            <label for="admin-user-id">대상 User ID</label>
+			            		        			            <input type="number" id="admin-user-id" placeholder="대상 사용자의 ID 입력">
+			            		        			        </div>
+			            		        			        <div class="action-buttons">
+			            		        			            <button id="ban-membership-button" style="background-color: #fd7e14;">멤버십 정지 (Ban)</button>
+			            		        			            <button id="unban-membership-button" style="background-color: #20c997;">멤버십 정지 해제 (Unban)</button>
+			            		        			        </div>
+			            		        
+			            		        			        <hr style="margin: 30px 0;">
+			            		        
+			            		        			        <div id="api-status">
+			            		        			            <h3>API 상태</h3>
+			            		        			            <pre>API 호출 결과가 여기에 표시됩니다.</pre>
+			            		        			        </div>			            			    </div>
 			
-			        <div id="api-status">
-			            <h3>API 상태</h3>
-			            <pre>API 호출 결과가 여기에 표시됩니다.</pre>
-			        </div>
-			    </div>
+			            			    <script>
+			            			        const clientKey = '__CLIENT_KEY__';
+			            			        const tossPayments = TossPayments(clientKey);
+			            			        const paymentButton = document.getElementById('payment-button');
+			            			        const authTokenInput = document.getElementById('auth-token');
+			            			        const statusDiv = document.getElementById('api-status');
 			
-			    <script>
-			        const clientKey = '__CLIENT_KEY__';
-			        const tossPayments = TossPayments(clientKey);
-			        const paymentButton = document.getElementById('payment-button');
-			        const authTokenInput = document.getElementById('auth-token');
-			        const statusDiv = document.getElementById('api-status');
+			            			        paymentButton.addEventListener('click', async function () {
+			            			            const token = authTokenInput.value.trim();
+			            			            if (!token) {
+			            			                alert('Access Token을 입력해주세요.');
+			            			                return;
+			            			            }
 			
-			        paymentButton.addEventListener('click', async function () {
-			            const token = authTokenInput.value.trim();
-			            if (!token) {
-			                alert('Access Token을 입력해주세요.');
-			                return;
-			            }
+			            			            paymentButton.disabled = true;
+			            			            statusDiv.innerHTML = '<h3>API 상태</h3><pre>결제 정보 생성 중...</pre>';
 			
-			            paymentButton.disabled = true;
-			            statusDiv.innerHTML = '<h3>API 상태</h3><pre>결제 정보 생성 중...</pre>';
-			
-			            try {
-			                // 1단계: 백엔드에 결제 정보 생성을 요청합니다.
-			                const response = await fetch('/api/payments/toss', {
-			                    method: 'POST',
-			                    headers: {
-			                        'Content-Type': 'application/json',
-			                        'Authorization': 'Bearer ' + token
-			                    },
-			                    body: JSON.stringify({
-			                        payType: 'CARD',
-			                        amount: document.getElementById('amount').value,
-			                        orderName: document.getElementById('order-name').value
-			                    })
-			                });
-			
+			            			            try {
+			            			                // 1단계: 백엔드에 결제 정보 생성을 요청합니다.
+			            			                const response = await fetch('/api/payments/toss', {
+			            			                    method: 'POST',
+			            			                    headers: {
+			            			                        'Content-Type': 'application/json',
+			            			                        'Authorization': 'Bearer ' + token
+			            			                    },
+			            			                    body: JSON.stringify({
+			            			                        payType: document.getElementById('pay-type').value,
+			            			                        amount: document.getElementById('amount').value,
+			            			                        orderName: document.getElementById('order-name').value,
+			            			                        membershipPlanType: 'DEFAULT_MEMBER_PLAN'
+			            			                    })
+			            			                });
 			                const responseData = await response.json();
 			                statusDiv.innerHTML = `<h3>API 상태</h3><pre>${JSON.stringify(responseData, null, 2)}</pre>`;
 			
@@ -124,6 +169,101 @@ public class TossPaymentTestController {
 			            } finally {
 			                paymentButton.disabled = false;
 			            }
+			        });
+
+			        // --- Membership Actions ---
+			        async function callMembershipApi(endpoint, method, statusTitle, userId = null) {
+			            const token = authTokenInput.value.trim();
+			            if (!token) {
+			                alert('Access Token을 입력해주세요.');
+			                return null;
+			            }
+			            statusDiv.innerHTML = `<h3>API 상태</h3><pre>${statusTitle} 중...</pre>`;
+			            try {
+			                let url = `/api/memberships`;
+			                if (userId) {
+			                    url += `/${userId}`;
+			                }
+			                url += endpoint;
+
+			                const response = await fetch(url, {
+			                    method: method,
+			                    headers: {
+			                        'Authorization': 'Bearer ' + token
+			                    }
+			                });
+			                const data = await response.json();
+			                if (!response.ok) {
+			                    throw data; // Throw error object from backend
+			                }
+			                statusDiv.innerHTML = `<h3>API 상태</h3><pre>${statusTitle} 결과: ${JSON.stringify(data, null, 2)}</pre>`;
+			                return data;
+			            } catch (error) {
+			                console.error(`${statusTitle} 오류:`, error);
+			                statusDiv.innerHTML = `<h3>API 상태</h3><pre>${statusTitle} 오류: ${JSON.stringify(error, null, 2)}</pre>`;
+			                return null;
+			            }
+			        }
+
+			        document.getElementById('cancel-membership-button').addEventListener('click', async function () {
+			            await callMembershipApi('/cancel', 'POST', '멤버십 취소');
+			        });
+
+			        document.getElementById('reactivate-canceled-membership-button').addEventListener('click', async function () {
+			            await callMembershipApi('/reactivate-canceled', 'POST', '취소된 멤버십 재활성화');
+			        });
+
+			        // --- Payment Cancellation ---
+			        document.getElementById('cancel-payment-button').addEventListener('click', async function () {
+			            const token = authTokenInput.value.trim();
+			            if (!token) {
+			                alert('Access Token을 입력해주세요.');
+			                return;
+			            }
+			            const paymentKey = document.getElementById('payment-key-cancel').value.trim();
+			            const cancelReason = document.getElementById('cancel-reason').value.trim();
+			            if (!paymentKey) {
+			                alert('취소할 paymentKey를 입력해주세요.');
+			                return;
+			            }
+			            statusDiv.innerHTML = '<h3>API 상태</h3><pre>결제 취소 중...</pre>';
+			            try {
+			                const response = await fetch('/api/payments/toss/cancel', {
+			                    method: 'POST',
+			                    headers: {
+			                        'Content-Type': 'application/json',
+			                        'Authorization': 'Bearer ' + token
+			                    },
+			                    body: JSON.stringify({ paymentKey, cancelReason })
+			                });
+			                const data = await response.json();
+			                if (!response.ok) {
+			                    throw data; // Throw error object from backend
+			                }
+			                statusDiv.innerHTML = `<h3>API 상태</h3><pre>결제 취소 결과: ${JSON.stringify(data, null, 2)}</pre>`;
+			            } catch (error) {
+			                console.error('결제 취소 오류:', error);
+			                statusDiv.innerHTML = `<h3>API 상태</h3><pre>결제 취소 오류: ${JSON.stringify(error, null, 2)}</pre>`;
+			            }
+			        });
+
+			        // --- Admin Actions ---
+			        document.getElementById('ban-membership-button').addEventListener('click', async function () {
+			            const userId = document.getElementById('admin-user-id').value.trim();
+			            if (!userId) {
+			                alert('대상 User ID를 입력해주세요.');
+			                return;
+			            }
+			            await callMembershipApi('/ban', 'POST', '멤버십 정지', userId);
+			        });
+
+			        document.getElementById('unban-membership-button').addEventListener('click', async function () {
+			            const userId = document.getElementById('admin-user-id').value.trim();
+			            if (!userId) {
+			                alert('대상 User ID를 입력해주세요.');
+			                return;
+			            }
+			            await callMembershipApi('/unban', 'POST', '멤버십 정지 해제', userId);
 			        });
 			    </script>
 			</body>

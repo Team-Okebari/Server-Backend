@@ -28,7 +28,9 @@ public enum ErrorCode {
 	MEMBERSHIP_ALREADY_ACTIVE(HttpStatus.CONFLICT, "M002", "이미 활성 멤버십을 가지고 있습니다."),
 	MEMBERSHIP_BANNED(HttpStatus.FORBIDDEN, "M003", "정지된 멤버십입니다."),
 	MEMBERSHIP_INVALID_STATUS(HttpStatus.BAD_REQUEST, "M004", "유효하지 않은 멤버십 상태입니다."),
-	PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "M005", "결제에 실패했습니다."),
+	MEMBERSHIP_ACTIVATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M005", "멤버십 활성화에 실패했습니다."),
+	MEMBERSHIP_CANCELED_CANNOT_RENEW(HttpStatus.CONFLICT, "M006", "취소된 멤버십이 존재하여 신규 결제를 진행할 수 없습니다. 멤버십 재활성화를 이용해주세요."),
+	PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "M007", "결제에 실패했습니다."),
 
 	// Payment Errors
 	NOT_FOUND_PAYMENT(HttpStatus.NOT_FOUND, "P001", "결제 정보를 찾을 수 없습니다."),

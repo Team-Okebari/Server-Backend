@@ -2,6 +2,8 @@ package com.okebari.artbite.payment.toss.dto;
 
 import java.time.LocalDateTime;
 
+import com.okebari.artbite.domain.payment.PaymentStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,6 +19,6 @@ public class PaymentHistoryDto {
 	private Long paymentHistoryId;
 	private Long amount;
 	private String orderName;
-	private boolean isPaySuccessYN;
+	private PaymentStatus status;
 	private LocalDateTime createdAt;
 }

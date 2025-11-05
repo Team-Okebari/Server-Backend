@@ -28,4 +28,7 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
 
 	// ACTIVE 상태이고 autoRenew=true이며 end_date가 갱신 기간(예: 만료 1일 전) 내에 있는 멤버십 찾기
 	List<Membership> findByStatusAndAutoRenewTrueAndEndDateBefore(MembershipStatus status, LocalDateTime endDate);
+
+	// 사용자와 상태, 플랜 타입으로 멤버십 찾기
+	Optional<Membership> findByUserAndStatusAndPlanType(User user, MembershipStatus status, MembershipPlanType planType);
 }

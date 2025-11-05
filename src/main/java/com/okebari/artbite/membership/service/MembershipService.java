@@ -44,6 +44,12 @@ public class MembershipService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_USER_NOT_FOUND));
 
+		// BANNED 상태의 멤버십이 있는지 확인
+		Optional<Membership> bannedMembership = membershipRepository.findByUserAndStatus(user, MembershipStatus.BANNED);
+		if (bannedMembership.isPresent()) {
+			throw new BusinessException(ErrorCode.MEMBERSHIP_BANNED);
+		}
+
 		// 기존 활성 멤버십 확인
 		Optional<Membership> activeMembership = membershipRepository.findTopByUserAndStatusOrderByStartDateDesc(user,
 			MembershipStatus.ACTIVE);
@@ -51,9 +57,9 @@ public class MembershipService {
 			throw new BusinessException(ErrorCode.MEMBERSHIP_ALREADY_ACTIVE);
 		}
 
-		// 재활성화를 위해 기존 EXPIRED 또는 CANCELED 멤버십 확인
+		// 재활성화를 위해 기존 EXPIRED 멤버십 확인 (CANCELED는 결제 없이 재활성화되므로 제외)
 		Optional<Membership> existingMembership = membershipRepository.findTopByUserAndStatusInOrderByStartDateDesc(
-			user, List.of(MembershipStatus.EXPIRED, MembershipStatus.CANCELED));
+			user, List.of(MembershipStatus.EXPIRED));
 
 		Membership membership;
 		LocalDateTime now = LocalDateTime.now().toLocalDate().atStartOfDay();
@@ -98,6 +104,30 @@ public class MembershipService {
 
 		membership.cancel();
 		membershipRepository.save(membership);
+	}
+
+	@Transactional
+	public MembershipStatusResponseDto reactivateCanceledMembership(Long userId) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_USER_NOT_FOUND));
+
+		Membership membership = membershipRepository.findTopByUserAndStatusOrderByStartDateDesc(user,
+				MembershipStatus.CANCELED)
+			.orElseThrow(() -> new BusinessException(ErrorCode.MEMBERSHIP_NOT_FOUND, "취소된 멤버십을 찾을 수 없습니다."));
+
+		// CANCELED 멤버십을 ACTIVE로 변경하고 자동 갱신 설정
+		membership.activate(membership.getStartDate(), membership.getEndDate(), membership.getConsecutiveMonths(),
+			defaultAutoRenew);
+		Membership savedMembership = membershipRepository.save(membership);
+
+		return MembershipStatusResponseDto.builder()
+			.status(savedMembership.getStatus())
+			.planType(savedMembership.getPlanType())
+			.startDate(savedMembership.getStartDate())
+			.endDate(savedMembership.getEndDate())
+			.consecutiveMonths(savedMembership.getConsecutiveMonths())
+			.autoRenew(savedMembership.isAutoRenew())
+			.build();
 	}
 
 	@Transactional(readOnly = true)

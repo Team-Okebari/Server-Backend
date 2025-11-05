@@ -9,7 +9,7 @@ spring:
 
 # 운영 환경에서는 필수적인 인증/인가 경로 외에는 화이트리스트를 최소화합니다.
 security:
-  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**
+  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /api/payments/toss/success, /api/payments/toss/fail
 
 cors:
   allowed-origins: ${CORS_URL}
@@ -29,6 +29,8 @@ payment:
     frontend_fail_url: "/payment/fail" # 프론트엔드 실패 경로
     url: "https://api.tosspayments.com/v1/payments/"
     order-name: "ArtBite 월간 구독"
+    ready-timeout-minutes: 10 # 10분 설정
+    ready-check-interval-ms: 300000 # 5분 설정 (스케줄러 실행 간격)
 
 membership:
   default-plan-type: DEFAULT_MEMBER_PLAN

@@ -51,6 +51,8 @@ payment:
     frontend_fail_url: "/payment/fail"
     url: "https://api.tosspayments.com/v1/payments/"
     order-name: "ArtBite 월간 구독"
+    ready-timeout-minutes: 10 # 테스트용으로 10분 설정
+    ready-check-interval-ms: 60000 # 테스트용으로 1분 설정 (스케줄러 실행 간격)
 
 membership:
   default-plan-type: DEFAULT_MEMBER_PLAN

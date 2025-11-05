@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,15 +23,18 @@ import com.okebari.artbite.AbstractContainerBaseTest;
 import com.okebari.artbite.common.exception.BusinessException;
 import com.okebari.artbite.common.exception.ErrorCode;
 import com.okebari.artbite.domain.membership.Membership;
+import com.okebari.artbite.domain.membership.MembershipPlanType;
 import com.okebari.artbite.domain.membership.MembershipRepository;
 import com.okebari.artbite.domain.membership.MembershipStatus;
 import com.okebari.artbite.domain.payment.Payment;
 import com.okebari.artbite.domain.payment.PaymentRepository;
+import com.okebari.artbite.domain.payment.PaymentStatus;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.domain.user.UserRole;
 import com.okebari.artbite.payment.toss.config.TossPaymentConfig;
 import com.okebari.artbite.payment.toss.dto.PayType;
+import com.okebari.artbite.payment.toss.dto.PaymentDto;
 import com.okebari.artbite.payment.toss.dto.PaymentSuccessDto;
 
 @SpringBootTest
@@ -88,7 +92,7 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 			.amount(amount)
 			.orderName("ArtBite 월간 구독")
 			.orderId(orderId)
-			.paySuccessYN(false)
+			.status(PaymentStatus.READY)
 			.build();
 		paymentRepository.save(pendingPayment);
 
@@ -107,7 +111,7 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 
 		// Then: 결제 상태 검증
 		Payment confirmedPayment = paymentRepository.findByOrderId(orderId).orElseThrow();
-		assertThat(confirmedPayment.isPaySuccessYN()).isTrue();
+		assertThat(confirmedPayment.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
 		assertThat(confirmedPayment.getPaymentKey()).isEqualTo(paymentKey);
 
 		// Then: 멤버십 상태 검증
@@ -135,7 +139,7 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 			.orderName("ArtBite 월간 구독")
 			.orderId(orderId)
 			.paymentKey(paymentKey)
-			.paySuccessYN(true) // 이미 성공한 상태
+			.status(PaymentStatus.SUCCESS) // 이미 성공한 상태
 			.build();
 		paymentRepository.save(successfulPayment);
 
@@ -165,7 +169,7 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 			.amount(originalAmount)
 			.orderName("ArtBite 월간 구독")
 			.orderId(orderId)
-			.paySuccessYN(false)
+			.status(PaymentStatus.READY)
 			.build();
 		paymentRepository.save(pendingPayment);
 
@@ -211,7 +215,7 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 			.amount(amount)
 			.orderName("ArtBite 월간 구독")
 			.orderId(orderId)
-			.paySuccessYN(false)
+			.status(PaymentStatus.READY)
 			.build();
 		paymentRepository.save(pendingPayment);
 
@@ -231,9 +235,69 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 
 		// Then: DB 상태가 변경되지 않았는지 확인
 		Payment paymentAfterFail = paymentRepository.findByOrderId(orderId).orElseThrow();
-		assertThat(paymentAfterFail.isPaySuccessYN()).isFalse();
+		assertThat(paymentAfterFail.getStatus()).isEqualTo(PaymentStatus.READY);
 
 		long membershipCount = membershipRepository.count();
 		assertThat(membershipCount).isZero();
+	}
+
+	@Test
+	@DisplayName("결제 요청 실패 - 취소된 멤버십이 존재하여 신규 결제 불가")
+	void requestTossPayment_fail_canceledMembershipExists() {
+		// Given: 사용자가 이미 취소된 멤버십을 가지고 있음
+		Membership canceledMembership = Membership.builder()
+			.user(testUser)
+			.planType(MembershipPlanType.DEFAULT_MEMBER_PLAN) // Corrected field name
+			.status(MembershipStatus.CANCELED)
+			.startDate(LocalDateTime.now().minusMonths(2))
+			.endDate(LocalDateTime.now().minusMonths(1))
+			.build();
+		membershipRepository.save(canceledMembership);
+
+		PaymentDto paymentDto = new PaymentDto(
+			PayType.CARD,
+			MembershipPlanType.DEFAULT_MEMBER_PLAN.getAmount(),
+			"ArtBite 월간 구독",
+			MembershipPlanType.DEFAULT_MEMBER_PLAN,
+			null, // yourSuccessUrl
+			null  // yourFailUrl
+		);
+
+		// When & Then: 새로운 결제를 요청할 때 예외가 발생하는지 검증
+		BusinessException exception = assertThrows(BusinessException.class, () -> {
+			tossPaymentService.requestTossPayment(paymentDto, testUser.getEmail());
+		});
+
+		assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.MEMBERSHIP_CANCELED_CANNOT_RENEW);
+	}
+
+	@Test
+	@DisplayName("결제 요청 실패 - 정지된 멤버십이 존재하여 신규 결제 불가")
+	void requestTossPayment_fail_bannedMembershipExists() {
+		// Given: 사용자가 이미 정지된 멤버십을 가지고 있음
+		Membership bannedMembership = Membership.builder()
+			.user(testUser)
+			.planType(MembershipPlanType.DEFAULT_MEMBER_PLAN)
+			.status(MembershipStatus.BANNED)
+			.startDate(LocalDateTime.now().minusMonths(2))
+			.endDate(LocalDateTime.now().minusMonths(1))
+			.build();
+		membershipRepository.save(bannedMembership);
+
+		PaymentDto paymentDto = new PaymentDto(
+			PayType.CARD,
+			MembershipPlanType.DEFAULT_MEMBER_PLAN.getAmount(),
+			"ArtBite 월간 구독",
+			MembershipPlanType.DEFAULT_MEMBER_PLAN,
+			null, // yourSuccessUrl
+			null  // yourFailUrl
+		);
+
+		// When & Then: 새로운 결제를 요청할 때 예외가 발생하는지 검증
+		BusinessException exception = assertThrows(BusinessException.class, () -> {
+			tossPaymentService.requestTossPayment(paymentDto, testUser.getEmail());
+		});
+
+		assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.MEMBERSHIP_BANNED);
 	}
 }

@@ -21,11 +21,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -58,8 +56,9 @@ public class Payment extends BaseTimeEntity {
 	@Column(nullable = false, unique = true, name = "order_id")
 	private String orderId; // 서비스에서 정한 주문 고유번호
 
-	@Column(nullable = false, name = "pay_success_yn")
-	private boolean paySuccessYN; // 결제 성공 여부
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private PaymentStatus status; // 결제 상태
 
 	@Column(name = "payment_key")
 	private String paymentKey; // 토스페이먼츠에서 정한 결제 구분용 키
@@ -67,25 +66,27 @@ public class Payment extends BaseTimeEntity {
 	@Column(name = "fail_reason")
 	private String failReason; // 실패 이유
 
-	@Column(name = "cancel_yn")
-	private boolean cancelYN; // 취소 여부
-
 	@Column(name = "cancel_reason")
 	private String cancelReason; // 취소 이유
 
 	// --- 비즈니스 로직 --- //
 	public void success(String paymentKey) {
 		this.paymentKey = paymentKey;
-		this.paySuccessYN = true;
+		this.status = PaymentStatus.SUCCESS;
 	}
 
 	public void fail(String failReason) {
 		this.failReason = failReason;
-		this.paySuccessYN = false;
+		this.status = PaymentStatus.FAILED;
 	}
 
 	public void cancel(String cancelReason) {
 		this.cancelReason = cancelReason;
-		this.cancelYN = true;
+		this.status = PaymentStatus.CANCELED;
+	}
+
+	public void processingFailed(String failReason) {
+		this.failReason = failReason;
+		this.status = PaymentStatus.PROCESSING_FAILED;
 	}
 }

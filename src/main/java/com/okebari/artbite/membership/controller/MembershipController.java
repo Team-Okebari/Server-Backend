@@ -30,6 +30,15 @@ public class MembershipController {
 		return CustomApiResponse.success(null);
 	}
 
+	@PostMapping("/reactivate-canceled")
+	@PreAuthorize("hasRole('USER')") // 멤버만 자신의 취소된 멤버십을 재활성화할 수 있습니다.
+	public CustomApiResponse<MembershipStatusResponseDto> reactivateCanceledMembership(
+		@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+		MembershipStatusResponseDto responseDto = membershipService.reactivateCanceledMembership(
+			customUserDetails.getUser().getId());
+		return CustomApiResponse.success(responseDto);
+	}
+
 	@GetMapping("/status")
 	@PreAuthorize("isAuthenticated()") // 인증된 모든 사용자는 자신의 멤버십 상태를 확인할 수 있습니다.
 	public CustomApiResponse<MembershipStatusResponseDto> getMembershipStatus(

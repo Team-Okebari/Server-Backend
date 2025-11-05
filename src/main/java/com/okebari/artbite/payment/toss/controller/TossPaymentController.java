@@ -133,7 +133,7 @@ public class TossPaymentController {
 				.amount(payment.getAmount())
 				.orderName(payment.getOrderName())
 				.createdAt(payment.getCreatedAt())
-				.isPaySuccessYN(payment.isPaySuccessYN())
+				.status(payment.getStatus())
 				.build())
 			.collect(Collectors.toList());
 
