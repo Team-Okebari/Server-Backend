@@ -99,7 +99,6 @@ public class JwtProvider {
 		}
 	}
 
-	// New method for refresh token validation
 	public void validateRefreshToken(String refreshToken) {
 		try {
 			Jwts.parser().verifyWith(key).build().parseSignedClaims(refreshToken);
@@ -118,9 +117,8 @@ public class JwtProvider {
 		}
 	}
 
-	// New method to get authentication from refresh token
 	public Authentication getAuthenticationFromRefreshToken(String refreshToken) {
-		Claims claims = parseClaims(refreshToken); // Use parseClaims to get claims even if expired
+		Claims claims = parseClaims(refreshToken); // 만료된 경우에도 클레임을 가져오기 위해 parseClaims 메서드 사용
 
 		if (claims.get(AUTHORITIES_KEY) == null) {
 			throw new RuntimeException("권한 정보가 없는 Refresh Token입니다.");
@@ -135,7 +133,7 @@ public class JwtProvider {
 		return new UsernamePasswordAuthenticationToken(principal, "", authorities);
 	}
 
-	private Claims parseClaims(String token) { // Renamed parameter from accessToken to token
+	private Claims parseClaims(String token) {
 		try {
 			return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
 		} catch (ExpiredJwtException e) {

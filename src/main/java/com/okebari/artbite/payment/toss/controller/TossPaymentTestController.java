@@ -70,30 +70,17 @@ public class TossPaymentTestController {
 			            		        </div>
 			
 			            		        			        <button id="payment-button">결제하기</button>
-			            		        
+			
 			            		        			        <hr style="margin: 30px 0;">
-			            		        
+			
 			            		        			        <h2>멤버십 액션</h2>
 			            		        			        <div class="action-buttons">
 			            		        			            <button id="cancel-membership-button" style="background-color: #dc3545;">멤버십 취소</button>
 			            		        			            <button id="reactivate-canceled-membership-button" style="background-color: #ffc107; color: #212529;">취소된 멤버십 재활성화</button>
 			            		        			        </div>
-			            		        
+			
 			            		        			        <hr style="margin: 30px 0;">
-			            		        
-			            		        			        <h2>결제 취소</h2>
-			            		        			        <div class="form-group">
-			            		        			            <label for="payment-key-cancel">취소할 Payment Key</label>
-			            		        			            <input type="text" id="payment-key-cancel" placeholder="결제 성공 후 받은 paymentKey 입력">
-			            		        			        </div>
-			            		        			        <div class="form-group">
-			            		        			            <label for="cancel-reason">취소 사유</label>
-			            		        			            <input type="text" id="cancel-reason" value="테스트 취소">
-			            		        			        </div>
-			            		        			        <button id="cancel-payment-button" style="background-color: #6c757d;">결제 취소</button>
-			            		        
-			            		        			        <hr style="margin: 30px 0;">
-			            		        
+			
 			            		        			        <h2>관리자 액션 (userId 필요)</h2>
 			            		        			        <div class="form-group">
 			            		        			            <label for="admin-user-id">대상 User ID</label>
@@ -103,9 +90,9 @@ public class TossPaymentTestController {
 			            		        			            <button id="ban-membership-button" style="background-color: #fd7e14;">멤버십 정지 (Ban)</button>
 			            		        			            <button id="unban-membership-button" style="background-color: #20c997;">멤버십 정지 해제 (Unban)</button>
 			            		        			        </div>
-			            		        
+			
 			            		        			        <hr style="margin: 30px 0;">
-			            		        
+			
 			            		        			        <div id="api-status">
 			            		        			            <h3>API 상태</h3>
 			            		        			            <pre>API 호출 결과가 여기에 표시됩니다.</pre>
@@ -170,7 +157,7 @@ public class TossPaymentTestController {
 			                paymentButton.disabled = false;
 			            }
 			        });
-
+			
 			        // --- Membership Actions ---
 			        async function callMembershipApi(endpoint, method, statusTitle, userId = null) {
 			            const token = authTokenInput.value.trim();
@@ -185,7 +172,7 @@ public class TossPaymentTestController {
 			                    url += `/${userId}`;
 			                }
 			                url += endpoint;
-
+			
 			                const response = await fetch(url, {
 			                    method: method,
 			                    headers: {
@@ -204,49 +191,15 @@ public class TossPaymentTestController {
 			                return null;
 			            }
 			        }
-
+			
 			        document.getElementById('cancel-membership-button').addEventListener('click', async function () {
 			            await callMembershipApi('/cancel', 'POST', '멤버십 취소');
 			        });
-
+			
 			        document.getElementById('reactivate-canceled-membership-button').addEventListener('click', async function () {
 			            await callMembershipApi('/reactivate-canceled', 'POST', '취소된 멤버십 재활성화');
 			        });
-
-			        // --- Payment Cancellation ---
-			        document.getElementById('cancel-payment-button').addEventListener('click', async function () {
-			            const token = authTokenInput.value.trim();
-			            if (!token) {
-			                alert('Access Token을 입력해주세요.');
-			                return;
-			            }
-			            const paymentKey = document.getElementById('payment-key-cancel').value.trim();
-			            const cancelReason = document.getElementById('cancel-reason').value.trim();
-			            if (!paymentKey) {
-			                alert('취소할 paymentKey를 입력해주세요.');
-			                return;
-			            }
-			            statusDiv.innerHTML = '<h3>API 상태</h3><pre>결제 취소 중...</pre>';
-			            try {
-			                const response = await fetch('/api/payments/toss/cancel', {
-			                    method: 'POST',
-			                    headers: {
-			                        'Content-Type': 'application/json',
-			                        'Authorization': 'Bearer ' + token
-			                    },
-			                    body: JSON.stringify({ paymentKey, cancelReason })
-			                });
-			                const data = await response.json();
-			                if (!response.ok) {
-			                    throw data; // Throw error object from backend
-			                }
-			                statusDiv.innerHTML = `<h3>API 상태</h3><pre>결제 취소 결과: ${JSON.stringify(data, null, 2)}</pre>`;
-			            } catch (error) {
-			                console.error('결제 취소 오류:', error);
-			                statusDiv.innerHTML = `<h3>API 상태</h3><pre>결제 취소 오류: ${JSON.stringify(error, null, 2)}</pre>`;
-			            }
-			        });
-
+			
 			        // --- Admin Actions ---
 			        document.getElementById('ban-membership-button').addEventListener('click', async function () {
 			            const userId = document.getElementById('admin-user-id').value.trim();
@@ -256,7 +209,7 @@ public class TossPaymentTestController {
 			            }
 			            await callMembershipApi('/ban', 'POST', '멤버십 정지', userId);
 			        });
-
+			
 			        document.getElementById('unban-membership-button').addEventListener('click', async function () {
 			            const userId = document.getElementById('admin-user-id').value.trim();
 			            if (!userId) {

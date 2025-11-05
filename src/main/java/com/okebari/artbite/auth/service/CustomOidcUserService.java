@@ -2,10 +2,8 @@ package com.okebari.artbite.auth.service;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -16,9 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.okebari.artbite.auth.dto.OAuthAttributes;
 import com.okebari.artbite.domain.user.User;
-import com.okebari.artbite.domain.user.UserRepository;
-import com.okebari.artbite.domain.user.UserSocialLogin;
-import com.okebari.artbite.domain.user.UserSocialLoginRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CustomOidcUserService extends OidcUserService {
 
-	private final SocialAuthService socialAuthService; // Injected SocialAuthService
+	private final SocialAuthService socialAuthService;
 
 	@Override
 	@Transactional
@@ -54,6 +49,5 @@ public class CustomOidcUserService extends OidcUserService {
 			oidcUser.getUserInfo(),
 			userNameAttributeName);
 	}
-
 
 }

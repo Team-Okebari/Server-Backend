@@ -23,7 +23,7 @@ public class RefreshTokenService {
 
 	public String createRefreshToken(User user, int tokenVersion) {
 		String refreshToken = UUID.randomUUID().toString();
-		// Store refreshToken:userId:tokenVersion mapping in Redis
+		// Redis에 refreshToken:userId:tokenVersion 매핑 저장
 		String value = user.getId() + ":" + tokenVersion;
 		redisTemplate.opsForValue().set(refreshToken, value, refreshTokenExpireTime);
 		return refreshToken;
