@@ -55,17 +55,17 @@ public record OAuthAttributes(
 
 		String name = null;
 		String email = null;
-		String providerId = null; // Initialize to null
+		String providerId = null; // null로 초기화
 
-		if (attributes.containsKey("id")) { // Check for 'id' first
+		if (attributes.containsKey("id")) { // 'id' 먼저 확인
 			providerId = String.valueOf(attributes.get("id"));
-		} else if (attributes.containsKey("sub")) { // If 'id' not found, check for 'sub'
+		} else if (attributes.containsKey("sub")) { // 'id'가 없으면 'sub' 확인
 			providerId = String.valueOf(attributes.get("sub"));
 		} else {
 			log.error("카카오 응답에서 'id' 또는 'sub' 속성을 찾을 수 없습니다. attributes: {}", attributes);
 			throw new OAuth2AuthenticationException("카카오 로그인 시 'id' 또는 'sub' 속성을 찾을 수 없어 로그인을 진행할 수 없습니다.");
 		}
-		// The existing logic for name and email extraction
+		// 이름과 이메일 추출을 위한 기존 로직
 		if (attributes.containsKey("kakao_account")) {
 			Map<String, Object> kakaoAccount = (Map<String, Object>)attributes.get("kakao_account");
 
@@ -147,10 +147,10 @@ public record OAuthAttributes(
 			.email(email)
 			.role(UserRole.USER)
 			.enabled(true)
-			.accountNonExpired(true) // Set to true for social login
-			.accountNonLocked(true) // Set to true for social login
-			.credentialsNonExpired(true) // Set to true for social login
-			.password(passwordEncoder.encode(UUID.randomUUID().toString())) // Hash the generated password
+			.accountNonExpired(true) // 소셜 로그인용으로 true 설정
+			.accountNonLocked(true) // 소셜 로그인용으로 true 설정
+			.credentialsNonExpired(true) // 소셜 로그인용으로 true 설정
+			.password(passwordEncoder.encode(UUID.randomUUID().toString())) // 생성된 비밀번호 해시
 			.build();
 	}
 }

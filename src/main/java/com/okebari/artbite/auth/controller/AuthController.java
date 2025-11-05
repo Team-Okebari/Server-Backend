@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -16,11 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.okebari.artbite.auth.dto.LoginRequestDto;
 import com.okebari.artbite.auth.dto.SignupRequestDto;
 import com.okebari.artbite.auth.dto.TokenDto;
+import com.okebari.artbite.auth.jwt.JwtProvider;
 import com.okebari.artbite.auth.service.AuthService;
-import com.okebari.artbite.auth.vo.CustomUserDetails;
 import com.okebari.artbite.common.dto.CustomApiResponse;
-import com.okebari.artbite.common.exception.BusinessException;
-import com.okebari.artbite.common.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
 	private final AuthService authService;
+	private final JwtProvider jwtProvider;
 
 	@PostMapping("/signup")
 	@ResponseStatus(HttpStatus.CREATED)
@@ -53,16 +51,20 @@ public class AuthController {
 
 	@PostMapping("/logout")
 	public CustomApiResponse<String> logout(
-		@RequestHeader("Authorization") String bearerAccessToken,
-		@AuthenticationPrincipal CustomUserDetails customUserDetails,
+		@RequestHeader(value = "Authorization", required = false) String bearerAccessToken,
 		HttpServletRequest request, HttpServletResponse response) {
-		if (customUserDetails == null) {
-			throw new BusinessException(ErrorCode.COMMON_UNAUTHORIZED);
+
+		String userEmail = null;
+
+		if (bearerAccessToken != null && bearerAccessToken.startsWith("Bearer ")) {
+			String accessToken = bearerAccessToken.substring(7);
+			try {
+				userEmail = jwtProvider.getAuthentication(accessToken).getName();
+			} catch (Exception e) {
+			}
 		}
-		String userEmail = customUserDetails.getUsername();
-		String accessToken = bearerAccessToken.substring(7);
-		String socialLogoutRedirectUrl = authService.logout(accessToken, userEmail, request,
-			response); // Get redirect URL
+
+		String socialLogoutRedirectUrl = authService.logout(bearerAccessToken, userEmail, request, response);
 		if (socialLogoutRedirectUrl != null) {
 			return CustomApiResponse.success(socialLogoutRedirectUrl); // Return URL in JSON
 		}

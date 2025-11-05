@@ -1,5 +1,6 @@
 package com.okebari.artbite.domain.user;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 import com.okebari.artbite.domain.common.BaseTimeEntity;
+import com.okebari.artbite.domain.membership.Membership;
+import com.okebari.artbite.domain.membership.MembershipStatus;
 
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -60,6 +63,10 @@ public class User extends BaseTimeEntity {
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<UserSocialLogin> socialLogins = new ArrayList<>();
 
+	// --- 멤버십 필드 ---
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Membership> memberships = new ArrayList<>();
+
 	@Builder
 	public User(String email, String password, String username, UserRole role,
 		boolean enabled, boolean accountNonExpired, boolean accountNonLocked,
@@ -86,6 +93,20 @@ public class User extends BaseTimeEntity {
 		if (this.username == null || this.username.isEmpty()) {
 			this.username = name;
 		}
+	}
+
+	// --- 멤버십 헬퍼 메소드 ---
+	public boolean hasActiveMembership() {
+		LocalDateTime now = LocalDateTime.now();
+		for (Membership membership : this.memberships) {
+			if (membership.getStatus() == MembershipStatus.ACTIVE) {
+				return true;
+			}
+			if (membership.getStatus() == MembershipStatus.CANCELED && now.isBefore(membership.getEndDate())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// UserDetails 구현이 CustomUserDetails로 분리됨
