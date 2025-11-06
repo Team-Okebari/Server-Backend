@@ -18,5 +18,5 @@ public record CreatorRequest(
 	@Size(max = 255) String xUrl,
 	@Size(max = 255) String blogUrl,
 	@Size(max = 255) String newsUrl
-) {
+){
 }

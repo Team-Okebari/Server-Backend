@@ -58,15 +58,15 @@ public class NoteQueryService {
 	/**
 	 * 유료 구독자를 위한 금일 게시 노트 상세.
 	 */
- 	public TodayPublishedResponse getTodayPublishedDetail(Long userId) {
- 		Note note = findTodayPublishedNote();
- 		boolean accessible = subscriptionService.isActiveSubscriber(userId);
- 		if (!accessible) {
- 			NotePreviewResponse preview = noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
- 			return new TodayPublishedResponse(false, null, preview);
- 		}
- 		return new TodayPublishedResponse(true, noteMapper.toResponse(note), null);
- 	}
+	public TodayPublishedResponse getTodayPublishedDetail(Long userId) {
+		Note note = findTodayPublishedNote();
+		boolean accessible = subscriptionService.isActiveSubscriber(userId);
+		if (!accessible) {
+			NotePreviewResponse preview = noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
+			return new TodayPublishedResponse(false, null, preview);
+		}
+		return new TodayPublishedResponse(true, noteMapper.toResponse(note), null);
+	}
 
 	/**
 	 * 지난 노트(ARCHIVED) 목록을 검색 조건과 함께 조회한다.

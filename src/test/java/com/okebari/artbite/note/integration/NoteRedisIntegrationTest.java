@@ -3,6 +3,7 @@ package com.okebari.artbite.note.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,8 @@ import com.okebari.artbite.note.scheduler.NoteStatusScheduler;
 @SpringBootTest
 @Transactional
 class NoteRedisIntegrationTest extends NoteContainerBaseTest {
+
+	private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
 	@Autowired
 	private NoteRepository noteRepository;
@@ -68,7 +71,7 @@ class NoteRedisIntegrationTest extends NoteContainerBaseTest {
 		// then: 실제 DB에서 노트 상태가 PUBLISHED로 변했는지 확인한다.
 		Note published = noteRepository.findById(note.getId()).orElseThrow();
 		assertThat(published.getStatus()).isEqualTo(NoteStatus.PUBLISHED);
-		assertThat(published.getPublishedAt()).isBeforeOrEqualTo(LocalDateTime.now());
+		assertThat(published.getPublishedAt()).isBeforeOrEqualTo(LocalDateTime.now(KST));
 
 		// and: Redis에 노트 요약 정보를 캐싱하고 즉시 조회해 본다.
 		String cacheKey = "notes:published:" + published.getId();

@@ -2,8 +2,6 @@ package com.okebari.artbite.note.mapper;
 
 import java.util.List;
 
-import org.springframework.stereotype.Component;
-
 import com.okebari.artbite.creator.domain.Creator;
 import com.okebari.artbite.creator.dto.CreatorSummaryDto;
 import com.okebari.artbite.creator.mapper.CreatorMapper;
@@ -18,9 +16,9 @@ import com.okebari.artbite.note.domain.NoteRetrospect;
 import com.okebari.artbite.note.dto.answer.NoteAnswerDto;
 import com.okebari.artbite.note.dto.answer.NoteAnswerResponse;
 import com.okebari.artbite.note.dto.bookmark.NoteBookmarkResponse;
-import com.okebari.artbite.note.dto.note.NoteCreateRequest;
 import com.okebari.artbite.note.dto.note.NoteCoverDto;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
+import com.okebari.artbite.note.dto.note.NoteCreateRequest;
 import com.okebari.artbite.note.dto.note.NoteExternalLinkDto;
 import com.okebari.artbite.note.dto.note.NoteOverviewDto;
 import com.okebari.artbite.note.dto.note.NotePreviewResponse;
@@ -29,6 +27,8 @@ import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.NoteRetrospectDto;
 import com.okebari.artbite.note.dto.question.NoteQuestionDto;
 import com.okebari.artbite.note.dto.summary.ArchivedNoteSummaryResponse;
+
+import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 
