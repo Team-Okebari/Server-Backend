@@ -9,11 +9,31 @@ spring:
 
 # 개발 환경에서는 인증/인가 경로 외에도 필요한 경로를 화이트리스트에 추가할 수 있습니다.
 security:
-  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /swagger-ui/**, /v3/api-docs/**, /swagger-resources/**, /webjars/**, /login-test-page, /api/notes/published/today-cover, /actuator/health
+  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /swagger-ui/**, /v3/api-docs/**, /swagger-resources/**, /webjars/**, /login-test-page, /payment-test-page, /api/payments/toss/success, /api/payments/toss/fail, /api/notes/published/today-cover, /actuator/health
+
 
 cors:
-  allowed-origins: ${CORS_URL:-http://localhost:3000}
+  allowed-origins: ${CORS_URL:-http://localhost:5173}
 
 jwt:
   access-token-expire-time: ${JWT_ACCESS_TOKEN_EXPIRE_TIME}
   refresh-token-expire-time: ${JWT_REFRESH_TOKEN_EXPIRE_TIME}
+
+payment:
+  toss:
+    test_client_api_key: ${TOSS_PAYMENTS_TEST_CLIENT_API_KEY}
+    test_secret_api_key: ${TOSS_PAYMENTS_TEST_SECRET_API_KEY}
+    success_url: "http://localhost:8080/api/payments/toss/success"
+    fail_url: "http://localhost:8080/api/payments/toss/fail"
+    membership_amount: 4900 # 월간 구독 금액
+    frontend_success_url: "/payment/success" # 프론트엔드 성공 경로
+    frontend_fail_url: "/payment/fail" # 프론트엔드 실패 경로
+    url: "https://api.tosspayments.com/v1/payments/"
+    order-name: "ArtBite 월간 구독"
+    ready-timeout-minutes: 10 # 개발용으로 10분 설정
+    ready-check-interval-ms: 300000 # 개발용으로 5분 설정 (스케줄러 실행 간격)
+
+membership:
+  default-plan-type: DEFAULT_MEMBER_PLAN
+  default-duration-months: 1
+  default-auto-renew: true

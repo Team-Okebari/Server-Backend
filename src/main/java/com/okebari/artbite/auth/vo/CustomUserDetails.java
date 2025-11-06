@@ -1,5 +1,6 @@
 package com.okebari.artbite.auth.vo;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -22,7 +23,15 @@ public class CustomUserDetails implements UserDetails {
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return List.of(new SimpleGrantedAuthority(user.getRole().getKey()));
+		List<GrantedAuthority> authorities = new ArrayList<>();
+		authorities.add(new SimpleGrantedAuthority(user.getRole().getKey()));
+
+		// 사용자가 활성 멤버십을 가지고 있다면 ROLE_MEMBER 추가
+		if (user.hasActiveMembership()) {
+			authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
+		}
+
+		return authorities;
 	}
 
 	@Override

@@ -208,4 +208,9 @@
     <module name="BeforeExecutionExclusionFileFilter">
         <property name="fileNamePattern" value="LoginTestController\.java$"/>
     </module>
+
+    <!-- Exclude TossPaymentTestController.java -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="TossPaymentTestController\.java$"/>
+    </module>
 </module>

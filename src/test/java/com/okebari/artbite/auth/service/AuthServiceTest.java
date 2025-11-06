@@ -160,7 +160,7 @@ class AuthServiceTest {
 		Cookie cookie = new Cookie("refreshToken", refreshToken);
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 
-		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken))
+		when(refreshTokenService.getAndRemoveRefreshToken(refreshToken)) // Use atomic method
 			.thenReturn(Optional.of(testUser.getId() + ":" + testUser.getTokenVersion()));
 		when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
 		when(jwtProvider.createToken(any(Authentication.class))).thenReturn("newAccessToken");
@@ -172,7 +172,7 @@ class AuthServiceTest {
 
 		// then
 		assertEquals("newAccessToken", tokenDto.getAccessToken());
-		verify(refreshTokenService).deleteRefreshToken(refreshToken);
+		verify(refreshTokenService, never()).deleteRefreshToken(anyString()); // Verify delete is NOT called separately
 		verify(refreshTokenService).createRefreshToken(eq(testUser), eq(testUser.getTokenVersion()));
 		verify(response).addCookie(any(Cookie.class));
 	}
@@ -187,8 +187,8 @@ class AuthServiceTest {
 		Cookie cookie = new Cookie("refreshToken", invalidRefreshToken);
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 
-		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(invalidRefreshToken)).thenReturn(
-			Optional.empty());
+		when(refreshTokenService.getAndRemoveRefreshToken(invalidRefreshToken)).thenReturn(
+			Optional.empty()); // Use atomic method
 
 		// when & then
 		assertThrows(InvalidTokenException.class, () -> {
@@ -206,64 +206,91 @@ class AuthServiceTest {
 		Cookie cookie = new Cookie("refreshToken", refreshToken);
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 
-		User userWithOldTokenVersion = User.builder()
+		User userWithNewerTokenVersion = User.builder()
 			.email(testUser.getEmail())
 			.password(testUser.getPassword())
 			.username(testUser.getUsername())
 			.role(UserRole.USER)
 			.tokenVersion(testUser.getTokenVersion() + 1) // User has newer token version
-			.accountNonExpired(true) // Add default values for account status
+			.accountNonExpired(true)
 			.accountNonLocked(true)
 			.credentialsNonExpired(true)
 			.enabled(true)
 			.build();
-		// Reflectively set ID for userWithOldTokenVersion
+		// Reflectively set ID for userWithNewerTokenVersion
 		try {
 			Field idField = User.class.getDeclaredField("id");
 			idField.setAccessible(true);
-			idField.set(userWithOldTokenVersion, testUser.getId());
+			idField.set(userWithNewerTokenVersion, testUser.getId());
 		} catch (NoSuchFieldException | IllegalAccessException e) {
-			fail("Failed to set ID for userWithOldTokenVersion: " + e.getMessage());
+			fail("Failed to set ID for userWithNewerTokenVersion: " + e.getMessage());
 		}
 
-		when(refreshTokenService.findUserIdAndTokenVersionByRefreshToken(refreshToken))
+		when(refreshTokenService.getAndRemoveRefreshToken(refreshToken)) // Use atomic method
 			.thenReturn(
 				Optional.of(testUser.getId() + ":" + testUser.getTokenVersion())); // Refresh token has old version
-		when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(userWithOldTokenVersion));
-		when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(userWithOldTokenVersion));
-		when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-			User savedUser = invocation.getArgument(0);
-			return savedUser;
-		});
+		when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(userWithNewerTokenVersion));
+		when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(userWithNewerTokenVersion));
+		when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		// when & then
 		assertThrows(InvalidTokenException.class, () -> {
 			authService.reissueAccessToken(request, response);
 		});
+
+		// Verify that revokeAllUserTokens was called
+		verify(userRepository).save(argThat(user -> user.getTokenVersion() == testUser.getTokenVersion() + 2));
 	}
 
 	@Test
-	@DisplayName("로그아웃 성공")
-	void logout_success() {
+	@DisplayName("로그아웃 성공 - Access Token 유효")
+	void logout_success_validAccessToken() {
 		// given
-		String accessToken = "accessToken";
+		String rawAccessToken = "accessToken";
+		String bearerAccessToken = "Bearer " + rawAccessToken;
 		String refreshToken = "refreshToken";
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		HttpServletResponse response = mock(HttpServletResponse.class);
 		Cookie cookie = new Cookie("refreshToken", refreshToken);
 
 		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
-		when(jwtProvider.getExpiration(accessToken)).thenReturn(1000L);
+		when(jwtProvider.getExpiration(rawAccessToken)).thenReturn(1000L); // Expect raw token
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-
-		// given
-		when(socialAuthService.getSocialLogoutRedirectUrl(testUser.getEmail())).thenReturn(null); // Mock social logout to return null for this test
+		when(socialAuthService.getSocialLogoutRedirectUrl(testUser.getEmail())).thenReturn(null);
 
 		// when
-		authService.logout(accessToken, testUser.getEmail(), request, response);
+		authService.logout(bearerAccessToken, testUser.getEmail(), request, response);
 
 		// then
-		verify(redisTemplate.opsForValue()).set(eq(accessToken), eq("logout"), anyLong(), any(TimeUnit.class));
+		verify(redisTemplate.opsForValue()).set(eq(rawAccessToken), eq("logout"), anyLong(), any(TimeUnit.class));
+		verify(refreshTokenService).deleteRefreshToken(refreshToken);
+		verify(response).addCookie(any(Cookie.class));
+	}
+
+	@Test
+	@DisplayName("로그아웃 성공 - Access Token 만료")
+	void logout_success_expiredAccessToken() {
+		// given
+		String rawAccessToken = "expiredAccessToken";
+		String bearerAccessToken = "Bearer " + rawAccessToken;
+		String refreshToken = "refreshToken";
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		HttpServletResponse response = mock(HttpServletResponse.class);
+		Cookie cookie = new Cookie("refreshToken", refreshToken);
+
+		when(request.getCookies()).thenReturn(new Cookie[] {cookie});
+		// Simulate expired token by throwing exception
+		when(jwtProvider.getExpiration(rawAccessToken)).thenThrow(new com.okebari.artbite.common.exception.TokenExpiredException("Token expired"));
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations); // Add this missing stub
+		when(socialAuthService.getSocialLogoutRedirectUrl(testUser.getEmail())).thenReturn(null);
+
+		// when
+		authService.logout(bearerAccessToken, testUser.getEmail(), request, response);
+
+		// then
+		// Verify that blacklist is NOT called for expired token
+		verify(redisTemplate.opsForValue(), never()).set(anyString(), anyString(), anyLong(), any(TimeUnit.class));
+		// Verify that refresh token is still deleted
 		verify(refreshTokenService).deleteRefreshToken(refreshToken);
 		verify(response).addCookie(any(Cookie.class));
 	}

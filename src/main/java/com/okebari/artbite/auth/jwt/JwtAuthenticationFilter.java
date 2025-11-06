@@ -56,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		if (StringUtils.hasText(jwt)) {
 			log.debug("JwtAuthenticationFilter: JWT found: {}", jwt);
 			try {
-				jwtProvider.validateToken(jwt); // This will throw an exception if invalid or expired
+				jwtProvider.validateToken(jwt);
 				log.debug("JwtAuthenticationFilter: JWT validated successfully.");
 
 				// Redis 블랙리스트에 있는 토큰인지 확인
@@ -84,8 +84,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 			} catch (InvalidTokenException | TokenExpiredException e) {
 				log.debug("JwtAuthenticationFilter: JWT Token validation failed: {}", e.getMessage());
-				// Do not set authentication, let the request proceed to other filters/handlers
-				// Spring Security's JwtAuthenticationEntryPoint will handle unauthorized access
+				// 인증을 설정하지 않고, 요청이 다른 필터/핸들러로 진행되도록 허용
+				// Spring Security의 JwtAuthenticationEntryPoint가 인증되지 않은 접근을 처리합니다.
 			}
 		} else {
 			log.debug("JwtAuthenticationFilter: No JWT found in request.");

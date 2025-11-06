@@ -77,7 +77,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 	@BeforeEach
 	void setup() {
-		this.mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService))
+		this.mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService, jwtProvider))
 			.setControllerAdvice(new GlobalExceptionHandler())
 			.setMessageConverters(jacksonMessageConverter)
 			.setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())

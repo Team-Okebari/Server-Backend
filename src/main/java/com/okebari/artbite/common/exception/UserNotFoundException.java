@@ -7,6 +7,6 @@ public class UserNotFoundException extends BusinessException {
 	}
 
 	public UserNotFoundException(String message) {
-		super(ErrorCode.AUTH_USER_NOT_FOUND, message); // 순서 변경
+		super(ErrorCode.AUTH_USER_NOT_FOUND, message);
 	}
 }
