@@ -30,7 +30,7 @@ public enum ErrorCode {
 	NOTE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "N003", "노트에 접근할 권한이 없습니다."),
 
 	// Creator Errors
-	CREATOR_NOT_FOUND(HttpStatus.NOT_FOUND, "CR001", "작가 정보를 찾을 수 없습니다.");
+	CREATOR_NOT_FOUND(HttpStatus.NOT_FOUND, "CR001", "작가 정보를 찾을 수 없습니다."),
 	// Membership Errors
 	MEMBERSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "멤버십을 찾을 수 없습니다."),
 	MEMBERSHIP_ALREADY_ACTIVE(HttpStatus.CONFLICT, "M002", "이미 활성 멤버십을 가지고 있습니다."),
