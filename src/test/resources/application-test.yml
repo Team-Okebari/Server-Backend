@@ -23,8 +23,15 @@ spring:
             client-id: "test-naver-client-id"
             client-secret: "test-naver-client-secret"
 
+oauth2:
+  logout:
+    redirect-uri:
+      kakao: "http://localhost:8080/logout/kakao"
+  redirect-uri:
+    success: "http://localhost:3000/oauth/redirect"
+
 security:
-  whitelisted-paths: /api/auth/**, /oauth2/**, /login/oauth2/code/**, /api/payments/toss/success, /api/payments/toss/fail
+  whitelisted-paths: /api/auth/**, /oauth2/**, /login/oauth2/code/**, /api/payments/toss/success, /api/payments/toss/fail, /api/config/payment
 
 cors:
   allowed-origins: http://localhost:3000
@@ -50,7 +57,7 @@ payment:
     frontend_success_url: "/payment/success"
     frontend_fail_url: "/payment/fail"
     url: "https://api.tosspayments.com/v1/payments/"
-    order-name: "ArtBite 월간 구독"
+    order-name: "Sparki 월간 구독"
     ready-timeout-minutes: 10 # 테스트용으로 10분 설정
     ready-check-interval-ms: 60000 # 테스트용으로 1분 설정 (스케줄러 실행 간격)
 

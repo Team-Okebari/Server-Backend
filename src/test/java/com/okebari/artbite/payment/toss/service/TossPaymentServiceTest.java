@@ -256,7 +256,7 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 
 		PaymentDto paymentDto = new PaymentDto(
 			PayType.CARD,
-			MembershipPlanType.DEFAULT_MEMBER_PLAN.getAmount(),
+			tossPaymentConfig.getMembershipAmount(),
 			"ArtBite 월간 구독",
 			MembershipPlanType.DEFAULT_MEMBER_PLAN,
 			null, // yourSuccessUrl
@@ -286,7 +286,7 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 
 		PaymentDto paymentDto = new PaymentDto(
 			PayType.CARD,
-			MembershipPlanType.DEFAULT_MEMBER_PLAN.getAmount(),
+			tossPaymentConfig.getMembershipAmount(),
 			"ArtBite 월간 구독",
 			MembershipPlanType.DEFAULT_MEMBER_PLAN,
 			null, // yourSuccessUrl

@@ -120,7 +120,7 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("Toss Payments 연동 멤버십 가입 성공 통합 테스트")
 	void enrollMembershipWithTossPayment_Success() throws Exception {
 		// Given: 결제 승인 성공 상황 Mocking
-		long amount = 5000L;
+		long amount = tossPaymentConfig.getMembershipAmount();
 		String paymentKey = "test_payment_key_12345";
 		PaymentSuccessDto mockTossResponse = PaymentSuccessDto.builder()
 			.status("DONE")
