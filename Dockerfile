@@ -1,6 +1,7 @@
 # 1. 빌드 단계: Gradle(JDK 21)을 사용하여 프로젝트를 빌드합니다.
 FROM gradle:8.8.0-jdk21-alpine AS build
 WORKDIR /app
+RUN mkdir -p logs
 
 # Gradle 빌드에 필요한 파일들을 먼저 복사합니다.
 COPY gradlew .
@@ -26,6 +27,10 @@ ENV TZ=Asia/Seoul
 
 # Create a non-root user
 RUN addgroup --system spring && adduser --system --ingroup spring spring
+
+# 로그 디렉토리 생성 및 권한 설정
+RUN mkdir -p /app/logs && chown -R spring:spring /app/logs
+
 USER spring
 
 # 빌드 단계에서 생성된 JAR 파일을 복사합니다。
