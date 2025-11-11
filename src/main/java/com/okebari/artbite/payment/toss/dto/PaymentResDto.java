@@ -12,7 +12,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class PaymentResDto {
-	private String payType; // 결제 타입 - 카드/현금/포인트
+	private String payType; // 결제 타입 - 카드/가상계좌/계좌이체/휴대폰
 	private Long amount; // 가격 정보
 	private String orderName; // 주문명
 	private String orderId; // 주문 Id

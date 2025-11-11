@@ -112,5 +112,19 @@
             <appender-ref ref="APP_FILE"/>
             <appender-ref ref="SECURITY_FILE"/>
         </root>
+
+        <!-- 운영 환경에서는 보안 관련 로거의 상세도를 INFO로 조정 -->
+        <logger name="org.springframework.security" level="INFO" additivity="false">
+            <appender-ref ref="APP_FILE"/>
+            <appender-ref ref="SECURITY_FILE"/>
+        </logger>
+        <logger name="org.springframework.security.oauth2" level="INFO" additivity="false">
+            <appender-ref ref="APP_FILE"/>
+            <appender-ref ref="SECURITY_FILE"/>
+        </logger>
+        <logger name="com.okebari.artbite.auth.jwt" level="INFO" additivity="false">
+            <appender-ref ref="APP_FILE"/>
+            <appender-ref ref="SECURITY_FILE"/>
+        </logger>
     </springProfile>
 </configuration>

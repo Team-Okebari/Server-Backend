@@ -17,8 +17,8 @@ public class OpenApiConfig {
 			.components(new Components().addSecuritySchemes("bearerAuth",
 				new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")))
 			.info(new Info()
-				.title("Artbite API 문서")
+				.title("Sparki API 문서")
 				.version("1.0")
-				.description("Artbite 애플리케이션의 API 문서입니다."));
+				.description("Sparki 애플리케이션의 API 문서입니다."));
 	}
 }
