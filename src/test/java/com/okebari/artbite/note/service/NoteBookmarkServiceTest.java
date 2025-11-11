@@ -138,11 +138,40 @@ class NoteBookmarkServiceTest {
 			.thenReturn(List.of(bookmark));
 
 		NoteBookmarkResponse response = new NoteBookmarkResponse(
-			10L, 20L, "title", "image", "creator", "jobTitle", bookmark.getCreatedAt());
+			10L, 20L, "title", "image", "tag", "creator", bookmark.getCreatedAt());
 		when(noteMapper.toBookmarkResponse(bookmark)).thenReturn(response);
 
-		assertThat(noteBookmarkService.list(3L))
+		assertThat(noteBookmarkService.list(3L, null))
 			.containsExactly(response);
+
+		verify(bookmarkRepository).findByUserIdOrderByCreatedAtDesc(3L);
+		verify(bookmarkRepository, never()).searchByUserIdAndKeyword(anyLong(), anyString());
+	}
+
+	@Test
+	void listWithKeywordUsesSearchQuery() {
+		User user = buildUser(4L, UserRole.USER);
+		Note note = Note.builder()
+			.status(NoteStatus.IN_PROGRESS)
+			.tagText("tag")
+			.sourceUrl(null)
+			.build();
+		NoteBookmark bookmark = NoteBookmark.builder()
+			.note(note)
+			.user(user)
+			.build();
+
+		when(bookmarkRepository.searchByUserIdAndKeyword(4L, "hello"))
+			.thenReturn(List.of(bookmark));
+		NoteBookmarkResponse response = new NoteBookmarkResponse(
+			11L, 30L, "title", "image", "tag", "creator", bookmark.getCreatedAt());
+		when(noteMapper.toBookmarkResponse(bookmark)).thenReturn(response);
+
+		assertThat(noteBookmarkService.list(4L, "hello"))
+			.containsExactly(response);
+
+		verify(bookmarkRepository).searchByUserIdAndKeyword(4L, "hello");
+		verify(bookmarkRepository, never()).findByUserIdOrderByCreatedAtDesc(4L);
 	}
 
 	private User buildUser(Long id, UserRole role) {

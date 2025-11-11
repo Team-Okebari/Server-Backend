@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.okebari.artbite.common.exception.NoteNotFoundException;
 import com.okebari.artbite.note.domain.Note;
 import com.okebari.artbite.note.domain.NoteStatus;
+import com.okebari.artbite.note.dto.note.ArchivedNoteViewResponse;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
 import com.okebari.artbite.note.dto.note.NotePreviewResponse;
 import com.okebari.artbite.note.dto.note.NoteResponse;
@@ -79,20 +80,23 @@ public class NoteQueryService {
 	}
 
 	/**
-	 * 유료 구독자 전용으로 아카이브 상세 내용을 제공한다.
+	 * 구독 상태에 따라 지난 노트 전체/프리뷰를 제공한다.
+     * 무료구독자: 상세페이지의 preview 화면 제공
+     * 유료구독자: 상세페이지 전체 제공
 	 */
-	public NoteResponse getArchivedNoteDetail(Long noteId, Long userId) {
-		if (!subscriptionService.isActiveSubscriber(userId)) {
-			throw new NoteAccessDeniedException("유료 구독자만 지난 노트 상세를 열람할 수 있습니다.");
-		}
-
+	public ArchivedNoteViewResponse getArchivedNoteView(Long noteId, Long userId) {
 		Note note = noteRepository.findById(noteId)
 			.orElseThrow(() -> new NoteNotFoundException(noteId));
 		if (note.getStatus() != NoteStatus.ARCHIVED) {
 			throw new NoteInvalidStatusException("해당 노트는 아카이브 상태가 아닙니다.");
 		}
 
-		return noteMapper.toResponse(note);
+		boolean subscribed = subscriptionService.isActiveSubscriber(userId);
+		if (subscribed) {
+			return new ArchivedNoteViewResponse(true, noteMapper.toResponse(note), null);
+		}
+		NotePreviewResponse preview = noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
+		return new ArchivedNoteViewResponse(false, null, preview);
 	}
 
 	private Note findTodayPublishedNote() {

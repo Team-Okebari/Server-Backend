@@ -870,6 +870,20 @@ public interface CreatorRepository extends JpaRepository<Creator, Long> {
 public interface NoteBookmarkRepository extends JpaRepository<NoteBookmark, Long> {
 	Optional<NoteBookmark> findByNoteIdAndUserId(Long noteId, Long userId);
 	List<NoteBookmark> findByUserIdOrderByCreatedAtDesc(Long userId);
+	@Query("""
+		select nb from NoteBookmark nb
+		join nb.note n
+		left join n.cover c
+		left join n.creator cr
+		where nb.user.id = :userId
+		and (
+			lower(c.title) like lower(concat('%', :keyword, '%'))
+			or lower(n.tagText) like lower(concat('%', :keyword, '%'))
+			or lower(cr.name) like lower(concat('%', :keyword, '%'))
+		)
+		order by nb.createdAt desc
+		""")
+	List<NoteBookmark> searchByUserIdAndKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
 }
 ```
 
@@ -896,7 +910,9 @@ public record NoteProcessDto(
 public record NoteCoverDto(
 	@NotBlank String title,
 	@NotBlank String teaser,
-	@NotBlank String mainImageUrl
+	@NotBlank String mainImageUrl,
+	String creatorName,
+	String creatorJobTitle
 ) {}
 
 // 프론트 응답용 커버 DTO: 작성자 이름/직함과 게시 시각까지 포함한다.
@@ -906,7 +922,7 @@ public record NoteCoverResponse(
 	String mainImageUrl,
 	String creatorName,
 	String creatorJobTitle,
-	LocalDateTime publishedAt
+	LocalDate publishedDate
 ) {}
 
 public record NoteOverviewDto(
@@ -944,17 +960,18 @@ public record NoteBookmarkResponse(
 	Long noteId,
 	String title,
 	String mainImageUrl,
+	String tagText,
 	String creatorName,
-	String creatorJobTitle,
 	LocalDateTime bookmarkedAt
 ) {}
 
 // 프론트 전용 응답 DTO: 카드에 필요한 필드만 전달
 public record BookmarkListItemResponse(
+	Long noteId,
 	String title,
 	String mainImageUrl,
 	String creatorName,
-	String creatorJobTitle
+	String tagText
 ) {}
 
 // USER 답변 입력 요청 DTO: 프론트에서 텍스트만 받아 서버에 전달한다.
@@ -1005,9 +1022,10 @@ public record NoteResponse(
 	NoteQuestionDto question,
 	NoteAnswerResponse answer,
 	Long creatorId,
+	String creatorJobTitle,
 	NoteExternalLinkDto externalLink,
 	CreatorSummaryDto creator,
-	LocalDateTime publishedAt,
+	LocalDate publishedAt,
 	LocalDateTime archivedAt,
 	LocalDateTime createdAt,
 	LocalDateTime updatedAt
@@ -1017,12 +1035,16 @@ public record NoteResponse(
 public record NotePreviewResponse(
 	Long id,
 	NoteCoverResponse cover,
-	String overviewPreview,
-	NoteExternalLinkDto externalLink,
-	CreatorSummaryDto creator
+	NoteOverviewDto overview
 ) {}
 
 public record TodayPublishedResponse(
+	boolean accessible,
+	NoteResponse note,
+	NotePreviewResponse preview
+) {}
+
+public record ArchivedNoteViewResponse(
 	boolean accessible,
 	NoteResponse note,
 	NotePreviewResponse preview
@@ -1033,7 +1055,8 @@ public record ArchivedNoteSummaryResponse(
 	String tagText,
 	String title,
 	String mainImageUrl,
-	String teaser
+	String creatorName,
+	LocalDate publishedDate
 ) {}
 ```
 
@@ -1109,20 +1132,28 @@ public class NoteMapper {
 	// 아카이브 노트를 지난 노트 목록용 요약 DTO로 변환한다.
 	public ArchivedNoteSummaryResponse toArchivedSummary(Note note) {
 		NoteCover cover = note.getCover();
-	return new ArchivedNoteSummaryResponse(
-		note.getId(),
-		note.getTagText(),
-		cover != null ? cover.getTitle() : null,
-		cover != null ? cover.getMainImageUrl() : null,
-		cover != null ? cover.getTeaser() : null
-	);
-}
+		return new ArchivedNoteSummaryResponse(
+			note.getId(),
+			note.getTagText(),
+			cover != null ? cover.getTitle() : null,
+			cover != null ? cover.getMainImageUrl() : null,
+			note.getCreator() != null ? note.getCreator().getName() : null,
+			note.getPublishedAt() != null ? note.getPublishedAt().toLocalDate() : null
+		);
+	}
 
 	private NoteCoverDto toCoverDto(NoteCover cover) {
 		if (cover == null) {
 			return null;
 		}
-		return new NoteCoverDto(cover.getTitle(), cover.getTeaser(), cover.getMainImageUrl());
+		Note note = cover.getNote();
+		return new NoteCoverDto(
+			cover.getTitle(),
+			cover.getTeaser(),
+			cover.getMainImageUrl(),
+			note != null && note.getCreator() != null ? note.getCreator().getName() : null,
+			note != null && note.getCreator() != null ? note.getCreator().getJobTitle() : null
+		);
 	}
 
 	public NoteCover toCover(NoteCoverDto dto) {
@@ -1395,18 +1426,19 @@ public Page<ArchivedNoteSummaryResponse> getArchivedNoteList(String keyword, Pag
 		return page.map(note -> noteMapper.toArchivedSummary(note));
 	}
 
-	// 유료 구독자 전용 아카이브 상세 조회
-	public NoteResponse getArchivedNoteDetail(Long noteId, Long userId) {
-		if (!subscriptionService.isActiveSubscriber(userId)) {
-			throw new NoteAccessDeniedException("유료 구독자만 지난 노트 상세를 열람할 수 있습니다.");
-		}
-		Note note = noteRepository.findById(noteId)
-			.orElseThrow(() -> new NoteNotFoundException(noteId));
-		if (note.getStatus() != NoteStatus.ARCHIVED) {
-			throw new NoteInvalidStatusException("해당 노트는 아카이브 상태가 아닙니다.");
-		}
-		return noteMapper.toResponse(note);
+// 아카이브 상세/프리뷰: 구독 여부에 따라 분기
+public ArchivedNoteViewResponse getArchivedNoteView(Long noteId, Long userId) {
+	Note note = noteRepository.findById(noteId)
+		.orElseThrow(() -> new NoteNotFoundException(noteId));
+	if (note.getStatus() != NoteStatus.ARCHIVED) {
+		throw new NoteInvalidStatusException("해당 노트는 아카이브 상태가 아닙니다.");
 	}
+	boolean subscribed = subscriptionService.isActiveSubscriber(userId);
+	if (subscribed) {
+		return new ArchivedNoteViewResponse(true, noteMapper.toResponse(note), null);
+	}
+	return new ArchivedNoteViewResponse(false, null, noteMapper.toPreview(note, 100));
+}
 
 	private Note findTodayPublishedNote() {
 		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
@@ -1682,12 +1714,12 @@ public class NoteQueryController {
 
 	@PreAuthorize("hasAnyRole('USER','ADMIN')")
 	@GetMapping("/archived/{noteId}")
-	// 유료 구독자: 특정 아카이브 노트 상세를 조회한다.
-	public CustomApiResponse<NoteResponse> getArchivedDetail(
+	// 구독 상태에 따라 프리뷰/상세를 분기해 돌려준다.
+	public CustomApiResponse<ArchivedNoteViewResponse> getArchivedDetail(
 		@PathVariable Long noteId,
 		@AuthenticationPrincipal CustomUserDetails userDetails) {
 		Long userId = userDetails.getUser().getId();
-		return CustomApiResponse.success(noteQueryService.getArchivedNoteDetail(noteId, userId));
+		return CustomApiResponse.success(noteQueryService.getArchivedNoteView(noteId, userId));
 	}
 }
 ```
@@ -1893,8 +1925,8 @@ public record NoteBookmarkResponse(
 	Long noteId,
 	String title,
 	String mainImageUrl,
+	String tagText,
 	String creatorName,
-	String creatorJobTitle,
 	LocalDateTime bookmarkedAt
 ) {}
 ```
@@ -1912,8 +1944,8 @@ public NoteBookmarkResponse toBookmarkResponse(NoteBookmark bookmark) {
 		note.getId(),
 		note.getCover() != null ? note.getCover().getTitle() : null,
 		note.getCover() != null ? note.getCover().getMainImageUrl() : null,
+		note.getTagText(),
 		note.getCreator() != null ? note.getCreator().getName() : null,
-		note.getCreator() != null ? note.getCreator().getJobTitle() : null,
 		bookmark.getCreatedAt()
 	);
 }
@@ -1936,10 +1968,6 @@ public class NoteBookmarkService {
 	private final UserRepository userRepository;
 	private final NoteMapper noteMapper;
 
-	// TODO: 북마크 검색/정렬 로직은 기획 확정 후 개선 예정 (현재는 created_at DESC 기본 제공)
-
-	// TODO: 북마크 검색/정렬 로직은 기획 확정 후 개선 예정 (현재는 전체 목록 + created_at DESC 기본 제공)
-
 	public boolean toggle(Long noteId, Long userId) {
 		NoteBookmark existing = bookmarkRepository.findByNoteIdAndUserId(noteId, userId).orElse(null);
 		if (existing != null) {
@@ -1955,8 +1983,11 @@ public class NoteBookmarkService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<NoteBookmarkResponse> list(Long userId) {
-		return bookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+	public List<NoteBookmarkResponse> list(Long userId, String keyword) {
+		List<NoteBookmark> bookmarks = (keyword == null || keyword.isBlank())
+			? bookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId)
+			: bookmarkRepository.searchByUserIdAndKeyword(userId, keyword.trim());
+		return bookmarks.stream()
 			.map(noteMapper::toBookmarkResponse)
 			.toList();
 	}
@@ -1989,10 +2020,11 @@ public class NoteBookmarkController {
 	@PreAuthorize("hasAnyRole('USER','ADMIN')")
 	@GetMapping("/bookmarks")
 	public CustomApiResponse<List<BookmarkListItemResponse>> bookmarks(
-		@AuthenticationPrincipal CustomUserDetails user) {
-		List<NoteBookmarkResponse> snapshots = noteBookmarkService.list(user.getUser().getId());
+		@AuthenticationPrincipal CustomUserDetails user,
+		@RequestParam(required = false) String keyword) {
+		List<NoteBookmarkResponse> snapshots = noteBookmarkService.list(user.getUser().getId(), keyword);
 		List<BookmarkListItemResponse> payload = snapshots.stream()
-			.map(dto -> new BookmarkListItemResponse(dto.title(), dto.mainImageUrl(), dto.creatorName()))
+			.map(dto -> new BookmarkListItemResponse(dto.noteId(), dto.title(), dto.mainImageUrl(), dto.creatorName(), dto.tagText()))
 			.toList();
 		return CustomApiResponse.success(payload);
 	}
@@ -2002,8 +2034,9 @@ public class NoteBookmarkController {
 ### 10.8 프론트엔드 연동 참고
 - `POST /api/notes/{noteId}/bookmark` 호출로 토글, 응답 `{ "bookmarked": true/false }`.
 - `GET /api/notes/bookmarks` 결과를 기반으로 북마크 목록 화면 구현.
-- 북마크 카드에는 `BookmarkListItemResponse`에 담긴 제목/대표 이미지/작가 이름만 사용하고,
+- 북마크 카드는 `BookmarkListItemResponse`에 담긴 `noteId`/제목/대표 이미지/작가 이름을 사용해 상세 이동 및 UI를 구성하고,
   썸네일은 전달된 mainImageUrl을 프론트에서 리사이즈해 구성한다.
+- `keyword` 파라미터를 사용하면 제목/작가명/태그 텍스트 기반으로 서버 측 검색이 이뤄지며, `tagText` 필드는 검색 하이라이트/필터링에 활용할 수 있다.
 ```java
 @Service
 @RequiredArgsConstructor
@@ -2063,7 +2096,7 @@ public CustomApiResponse<List<BookmarkListItemResponse>> bookmarks(
     @AuthenticationPrincipal CustomUserDetails userDetails) {
     List<NoteBookmarkResponse> snapshots = noteBookmarkService.list(userDetails.getUser().getId());
     List<BookmarkListItemResponse> payload = snapshots.stream()
-        .map(dto -> new BookmarkListItemResponse(dto.title(), dto.mainImageUrl(), dto.creatorName()))
+        .map(dto -> new BookmarkListItemResponse(dto.noteId(), dto.title(), dto.mainImageUrl(), dto.creatorName()))
         .toList();
     return CustomApiResponse.success(payload);
 }
@@ -2164,7 +2197,7 @@ class NoteServiceTest {
 		return new NoteCreateRequest(
 			status,
 			"tag",
-			new NoteCoverDto("title", "teaser", "https://img.main"),
+			new NoteCoverDto("title", "teaser", "https://img.main", "홍길동", "일러스트레이터"),
 			new NoteOverviewDto("overview", "overview body", "https://img.overview"),
 			new NoteRetrospectDto("retro", "retro body"),
 			List.of(
@@ -2181,7 +2214,7 @@ class NoteServiceTest {
 		return new NoteUpdateRequest(
 			status,
 			"tag",
-			new NoteCoverDto("title", "teaser", "https://img.main"),
+			new NoteCoverDto("title", "teaser", "https://img.main", "홍길동", "일러스트레이터"),
 			new NoteOverviewDto("overview", "overview body", "https://img.overview"),
 			new NoteRetrospectDto("retro", "retro body"),
 			List.of(

@@ -77,7 +77,7 @@
   "mainImageUrl": "https://...",
   "creatorName": "작성자",
   "creatorJobTitle": "일러스트레이터",
-  "publishedAt": "2025-11-04T00:00:00"
+  "publishedDate": "2025-11-04"
 }
 ```
 - `creatorJobTitle`는 작가의 직함/한줄 소개(`Creator.jobTitle`)로 프론트 히어로 카드에서 이름과 함께 노출합니다.
@@ -138,7 +138,7 @@
 ### 2.2 미리보기 (무료 사용자를 위한 미리보기)
 
 - 엔드포인트: `GET /api/notes/{noteId}/preview`
-- 응답: `NotePreviewResponse { id, cover, overviewPreview(100자), externalLink, creator }`
+- 응답: `NotePreviewResponse { id, cover(title/mainImage/creator/publishedDate, teaser=null), overview { sectionTitle, bodyText<=100자, imageUrl } }`
 - 용도: 상세 페이지 진입 시 즉시 보여줄 원본 데이터 (전체 작성 완료 전에도 노출 가능)
 
 ### 2.3 지난 노트 (아카이브)
@@ -155,7 +155,8 @@
   "tagText": "태그",
   "title": "노트 제목",
   "mainImageUrl": "https://...",
-  "teaser": "짧은 소개 문구"
+  "creatorName": "작가명",
+  "publishedDate": "2024-06-01"
 }
 ```
 
@@ -166,10 +167,10 @@
 | 목적 | 엔드포인트 | 권한 | 설명 |
 |------|------------|------|------|
 | 북마크 토글 | `POST /api/notes/{noteId}/bookmark` | USER / ADMIN | 존재 여부에 따라 추가/삭제, `{ "bookmarked": true/false }` |
-| 북마크 목록 | `GET /api/notes/bookmarks` | USER / ADMIN | `BookmarkListItemResponse { title, mainImageUrl, creatorName, creatorJobTitle }` |
+| 북마크 목록/검색 | `GET /api/notes/bookmarks?keyword=` | USER / ADMIN | `BookmarkListItemResponse { noteId, title, mainImageUrl, creatorName, tagText }` |
 
 프론트에서는 `CustomApiResponse`를 파싱 후 토글 결과(`bookmarked`)를 상태에 반영합니다.
-`creatorJobTitle`은 북마크 카드에서 작가 직함 문구로 사용합니다.
+목록 API는 `keyword`(작가명/태그/제목 검색) 파라미터를 지원하며, 응답 `tagText`는 검색 하이라이트용으로만 사용하고 UI에는 제목·작가명·메인 이미지만 노출합니다.
 
 ### 2.5 노트 작성/수정/삭제 (Admin)
 

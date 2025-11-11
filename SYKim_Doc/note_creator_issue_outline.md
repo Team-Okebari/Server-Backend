@@ -7,7 +7,7 @@
   - 노트 상태는 `IN_PROGRESS → COMPLETED → PUBLISHED → ARCHIVED` 흐름을 따르며, 완료된 노트만 배포 후보로 취급합니다.
 - **노트 조회 (USER/ADMIN)**  
   - `/api/notes/published/today-cover`, `/today-detail`, `/today-preview`로 금일 노트를 조회합니다.  
-  - 무료 사용자용 미리보기(`NotePreviewResponse`)는 커버와 개요 100자 요약, 작가 요약 정보를 제공합니다.  
+  - 무료 사용자용 미리보기(`NotePreviewResponse`)는 커버와 개요 100자(`NoteOverviewDto`)만 제공합니다.  
   - 지난 노트 목록/상세, 북마크 토글/조회 API를 통해 PUBLISHED→ARCHIVED 이후 콘텐츠 열람과 즐겨찾기를 처리합니다.
 - **작가(Creator) 관리 (ADMIN 전용)**  
   - `/api/admin/creators`에서 작가 등록/수정/삭제/조회 기능을 제공합니다.  
@@ -31,7 +31,7 @@
   - 기존 문서에서 `bio`와 `job_title`을 혼용해 안내하던 부분을 분리하고, `profile_image_url` 컬럼 정의가 누락된 문제를 수정했습니다.  
   - `creatorId`를 “선택 사항”으로 안내하던 문서를 실제 검증(필수) 로직에 맞춰 정정했습니다.
 - **응답 DTO 불일치**  
-  - `NotePreviewResponse.overviewPreview`가 문자열로 내려가는데도 기존 명세에서 객체로 기술되던 오류를 발견해 수정했습니다.  
+  - `NotePreviewResponse`를 `NoteOverviewDto overview`(본문 100자, 이미지 포함)만 싣도록 통일했고, 과거 명세에 있던 `creator summary`/`externalLink` 필드도 제거했습니다.  
   - 로그아웃 API가 리디렉션 URL(또는 `null`)을 반환함에도 불구하고 `accessToken`을 내려준다고 문서화된 부분을 현행 코드와 맞추었습니다.
 - **환경/설정 변경**  
   - Dockerfile의 런타임 이미지를 `openjdk:21-slim`에서 `eclipse-temurin:21-jre`로 교체했으며, 신규 베이스 이미지와의 호환성(인증, 타임존, 폰트 등)을 재확인해야 합니다.  
