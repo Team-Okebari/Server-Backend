@@ -20,7 +20,8 @@ COPY src ./src
 RUN ./gradlew build -x test --no-daemon
 
 # 2. 실행 단계: 빌드된 JAR 파일을 가벼운 Java 21 환경에서 실행합니다.
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
+# 기존 openjdk:21-slim
 WORKDIR /app
 
 ENV TZ=Asia/Seoul
