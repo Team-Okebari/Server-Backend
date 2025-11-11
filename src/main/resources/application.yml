@@ -3,7 +3,7 @@ spring:
     name: artbite
   profiles:
     active: dev # 기본적으로 dev 환경 사용 (개발 시)
-    include: secret, oauth2 # secret, oauth2 설정 포함
+    include: oauth2key, oauth2 # oauth2key, oauth2 설정 포함
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}

@@ -9,17 +9,16 @@ import com.okebari.artbite.common.exception.ErrorCode;
 import lombok.Builder;
 import lombok.Getter;
 
-@Getter // Added
-@Builder // Added
+@Getter
+@Builder
 @JsonInclude(Include.NON_NULL) // null 값은 응답에 포함하지 않음
-public class CustomApiResponse<T> { // Changed from record to class
+public class CustomApiResponse<T> {
 
 	private final boolean success;
 	private final T data;
-	private final Error error; // Changed type from int status, String message
-	private final LocalDateTime timestamp; // Changed from Instant
+	private final Error error;
+	private final LocalDateTime timestamp;
 
-	// Constructor for @Builder
 	private CustomApiResponse(boolean success, T data, Error error, LocalDateTime timestamp) {
 		this.success = success;
 		this.data = data;
@@ -27,7 +26,7 @@ public class CustomApiResponse<T> { // Changed from record to class
 		this.timestamp = timestamp;
 	}
 
-	/* ---------- Factory: Success ---------- */
+	// 성공 응답 팩토리
 
 	public static <T> CustomApiResponse<T> success(T data) {
 		return CustomApiResponse.<T>builder()
@@ -45,7 +44,7 @@ public class CustomApiResponse<T> { // Changed from record to class
 			.build();
 	}
 
-	/* ---------- Factory: Error ---------- */
+	// 에러 응답 팩토리
 
 	public static CustomApiResponse<?> error(ErrorCode errorCode) {
 		return CustomApiResponse.builder()
@@ -70,13 +69,25 @@ public class CustomApiResponse<T> { // Changed from record to class
 			.build();
 	}
 
-	@Getter // Added
-	@Builder // Added
+	// 에러 응답 (데이터 포함)
+	public static <T> CustomApiResponse<T> error(ErrorCode errorCode, String message, T data) {
+		return CustomApiResponse.<T>builder()
+			.success(false)
+			.data(data)
+			.error(Error.builder()
+				.code(errorCode.getCode())
+				.message(message)
+				.build())
+			.timestamp(LocalDateTime.now())
+			.build();
+	}
+
+	@Getter
+	@Builder
 	public static class Error {
 		private final String code;
 		private final String message;
 
-		// Constructor for @Builder
 		private Error(String code, String message) {
 			this.code = code;
 			this.message = message;

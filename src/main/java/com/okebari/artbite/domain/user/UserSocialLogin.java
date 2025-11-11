@@ -11,6 +11,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
+import com.okebari.artbite.domain.common.BaseTimeEntity;
+
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,7 +23,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "user_social_logins",
 	uniqueConstraints = @UniqueConstraint(columnNames = {"provider", "providerId"}))
-public class UserSocialLogin {
+public class UserSocialLogin extends BaseTimeEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,7 +37,7 @@ public class UserSocialLogin {
 	private String provider; // google, kakao, naver
 
 	@Column(nullable = false, length = 255)
-	private String providerId; // ID from the social provider
+	private String providerId; // 소셜 제공자로부터 받은 ID
 
 	@Builder
 	public UserSocialLogin(User user, String provider, String providerId) {

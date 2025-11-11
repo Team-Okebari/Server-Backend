@@ -47,3 +47,6 @@ out/
 
 ### secret ###
 application-secret.yml
+
+### test script ###
+/infra/scripts/e2e

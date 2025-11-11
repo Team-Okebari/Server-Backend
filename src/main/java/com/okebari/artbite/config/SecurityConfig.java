@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -31,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -47,7 +50,7 @@ public class SecurityConfig {
 	private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
 	@Value("${security.whitelisted-paths}")
-	private final String[] whitelistedPaths;
+	private String[] whitelistedPaths;
 
 	@Value("${cors.allowed-origins}")
 	private String[] corsAllowedOrigins;
@@ -71,7 +74,7 @@ public class SecurityConfig {
 			)
 			.logout(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(authorize -> authorize
-				.requestMatchers(whitelistedPaths).permitAll() //application-local.yml에서 화이트리스트 관리
+				.requestMatchers(whitelistedPaths).permitAll() //application-*.yml에서 화이트리스트 관리
 				.anyRequest().authenticated()
 			)
 			.oauth2Login(oauth2 -> oauth2
@@ -82,9 +85,11 @@ public class SecurityConfig {
 				.successHandler(oAuth2LoginSuccessHandler)
 				.failureHandler(oAuth2LoginFailureHandler)
 			)
-			.headers(
-				headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
-			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+			.headers(headers -> headers
+				.frameOptions(frameOptions -> frameOptions.sameOrigin()) // X-Frame-Options
+				.httpStrictTransportSecurity(Customizer.withDefaults()) // HSTS (with default settings)
+				.contentTypeOptions(Customizer.withDefaults()) // X-Content-Type-Options: nosniff
+			).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterBefore(mdcLoggingFilter, JwtAuthenticationFilter.class);
 
 		return http.build();

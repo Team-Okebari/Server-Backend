@@ -42,7 +42,19 @@ public class LoginTestController {
 			        #login-status.logged-out { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
 			    </style>
 			    <script>
-			        let currentAccessToken = '';
+			        let currentAccessToken = localStorage.getItem('accessToken') || '';
+			
+			        function saveAccessToken(token) {
+			            currentAccessToken = token;
+			            localStorage.setItem('accessToken', token);
+			            document.getElementById('token-display').innerHTML = `<h3>현재 토큰</h3><pre>${currentAccessToken}</pre>`;
+			        }
+			
+			        function clearAccessToken() {
+			            currentAccessToken = '';
+			            localStorage.removeItem('accessToken');
+			            document.getElementById('token-display').innerHTML = '<h3>현재 토큰</h3><p>로그아웃되었습니다.</p>';
+			        }
 			
 			        function getUrlParameter(name) {
 			            name = name.replace(/[[\\]]/g, '\\$&');
@@ -115,8 +127,7 @@ public class LoginTestController {
 			            const body = JSON.stringify({ email: email, password: form.password.value });
 			            const result = await apiCall('login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }, '로그인 결과');
 			            if (result && result.data && result.data.accessToken) {
-			                currentAccessToken = result.data.accessToken;
-			                document.getElementById('token-display').innerHTML = `<h3>현재 토큰</h3><pre>${currentAccessToken}</pre>`;
+			                saveAccessToken(result.data.accessToken);
 			                updateLoginStatus(email, '일반'); // Update status with email
 			            }
 			        }
@@ -130,22 +141,21 @@ public class LoginTestController {
 			
 			            if (result && result.success && result.data) {
 			                console.log('Redirecting to social logout:', result.data);
-			                updateLoginStatus(null); // Clear status before redirect
+			                clearAccessToken(); // Clear token from localStorage
+			                updateLoginStatus(null); 
 			                window.location.href = result.data;
 			            } else if (result && result.success) {
 			                console.log('App logout successful.');
-			                currentAccessToken = '';
-			                document.getElementById('token-display').innerHTML = '<h3>현재 토큰</h3><p>로그아웃되었습니다.</p>';
+			                clearAccessToken(); // Clear token from localStorage
 			                displayStatus('api-status', '로그아웃 결과', { success: true, message: '앱에서 로그아웃되었습니다.' });
 			                updateLoginStatus(null); // Clear status after app logout
 			            }
 			        }
 			
 			        async function reissue() {
-			            const result = await apiCall('reissue', { method: 'POST' }, '토큰 재발급 결과');
+			            const result = await apiCall('reissue', { method: 'POST', headers: { 'Authorization': `Bearer ${currentAccessToken}` } }, '토큰 재발급 결과');
 			            if (result && result.data && result.data.accessToken) {
-			                currentAccessToken = result.data.accessToken;
-			                document.getElementById('token-display').innerHTML = `<h3>새 토큰</h3><pre>${currentAccessToken}</pre>`;
+			                saveAccessToken(result.data.accessToken);
 			                const decodedToken = parseJwt(currentAccessToken);
 			                if (decodedToken && decodedToken.sub) {
 			                    updateLoginStatus(decodedToken.sub, '재발급'); // Update status with new token's email
@@ -156,16 +166,27 @@ public class LoginTestController {
 			        window.onload = () => {
 			            const socialAccessToken = getUrlParameter('accessToken');
 			            if (socialAccessToken) {
-			                currentAccessToken = socialAccessToken;
-			                document.getElementById('token-display').innerHTML = `<h3>소셜 로그인 토큰</h3><pre>${currentAccessToken}</pre>`;
+			                saveAccessToken(socialAccessToken);
 			                window.history.replaceState({}, document.title, window.location.pathname);
+			            }
 			
-			                const decodedToken = parseJwt(socialAccessToken);
+			            // Load token on every page load from localStorage
+			            const storedToken = localStorage.getItem('accessToken');
+			            if (storedToken) {
+			                currentAccessToken = storedToken;
+			                const decodedToken = parseJwt(currentAccessToken);
 			                if (decodedToken && decodedToken.sub) {
-			                    updateLoginStatus(decodedToken.sub, '소셜'); // Update status with social login email
+			                    updateLoginStatus(decodedToken.sub, '저장됨');
+			                } else{
+			                    updateLoginStatus(null); // Invalid stored token
+			                    clearAccessToken();
 			                }
 			            } else {
 			                updateLoginStatus(null); // Initialize as logged out
+			            }
+			            // Display current token if available
+			            if (currentAccessToken) {
+			                document.getElementById('token-display').innerHTML = `<h3>현재 토큰</h3><pre>${currentAccessToken}</pre>`;
 			            }
 			        };
 			    </script>
@@ -197,6 +218,7 @@ public class LoginTestController {
 			                <div class="action-buttons">
 			                    <button onclick="logout()">로그아웃</button>
 			                    <button onclick="reissue()">토큰 재발급</button>
+			                    <a href="/payment-test-page" class="button" style="background-color: #28a745; color: white;">결제 테스트 페이지로 이동</a>
 			                </div>
 			
 			                <div id="api-status">
