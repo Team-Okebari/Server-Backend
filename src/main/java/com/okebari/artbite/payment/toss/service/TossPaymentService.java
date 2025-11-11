@@ -74,7 +74,7 @@ public class TossPaymentService {
 				throw new BusinessException(ErrorCode.MEMBERSHIP_BANNED);
 			});
 
-		Long expectedAmount = paymentDto.getMembershipPlanType().getAmount();
+		Long expectedAmount = tossPaymentConfig.getMembershipAmount();
 		if (!paymentDto.getAmount().equals(expectedAmount)) {
 			throw new BusinessException(ErrorCode.PAYMENT_AMOUNT_MISMATCH, "요청된 결제 금액이 멤버십 플랜의 금액과 일치하지 않습니다.");
 		}

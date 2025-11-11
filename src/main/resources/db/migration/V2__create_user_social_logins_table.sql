@@ -12,7 +12,4 @@ CREATE TABLE user_social_logins (
     CONSTRAINT uk_provider_provider_id UNIQUE (provider, provider_id)
 );
 
--- Remove provider and provider_id columns from users table
-ALTER TABLE users
-DROP COLUMN provider,
-DROP COLUMN provider_id;
+

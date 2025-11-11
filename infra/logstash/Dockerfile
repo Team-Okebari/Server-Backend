@@ -1,2 +1,2 @@
-FROM logstash:8.10.4
+FROM logstash:8.14.1
 COPY logstash.conf /usr/share/logstash/pipeline/

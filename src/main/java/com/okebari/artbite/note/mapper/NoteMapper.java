@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.stereotype.Component;
+
 import com.okebari.artbite.creator.domain.Creator;
 import com.okebari.artbite.creator.dto.CreatorSummaryDto;
 import com.okebari.artbite.creator.mapper.CreatorMapper;
@@ -29,8 +31,6 @@ import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.NoteRetrospectDto;
 import com.okebari.artbite.note.dto.question.NoteQuestionDto;
 import com.okebari.artbite.note.dto.summary.ArchivedNoteSummaryResponse;
-
-import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 
@@ -87,8 +87,8 @@ public class NoteMapper {
 			toRetrospectDto(note.getRetrospect()),
 			note.getProcesses() != null
 				? note.getProcesses().stream()
-					.map(process -> this.toProcessDto(process))
-					.toList()
+				.map(process -> this.toProcessDto(process))
+				.toList()
 				: List.of(),
 			toQuestionDto(note.getQuestion()),
 			toAnswerResponse(note.getQuestion() != null ? note.getQuestion().getAnswer() : null),

@@ -2,6 +2,7 @@ package com.okebari.artbite.payment.toss.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.okebari.artbite.payment.toss.config.TossPaymentConfig;
@@ -18,6 +19,8 @@ public class TossPaymentTestController {
 	@ResponseBody
 	public String getPaymentTestPage() {
 		String clientKey = tossPaymentConfig.getTestClientApiKey();
+		String orderName = tossPaymentConfig.getOrderName();
+		Long amount = tossPaymentConfig.getMembershipAmount();
 		String htmlContent = """
 			<!DOCTYPE html>
 			<html lang="ko">
@@ -61,42 +64,42 @@ public class TossPaymentTestController {
 			
 			        <div class="form-group">
 			            <label for="order-name">주문명</label>
-			            <input type="text" id="order-name" value="테스트 멤버십">
+			            <input type="text" id="order-name" value="__ORDER_NAME__">
 			        </div>
 			
 			        <div class="form-group">
 			            		            <label for="amount">결제 금액</label>
-			            		            <input type="number" id="amount" value="5000">
+			            		            <input type="number" id="amount" value="__AMOUNT__">
 			            		        </div>
 			
-			            		        			        <button id="payment-button">결제하기</button>
+			            		        		        <button id="payment-button">결제하기</button>
 			
-			            		        			        <hr style="margin: 30px 0;">
+			            		        		        <hr style="margin: 30px 0;">
 			
-			            		        			        <h2>멤버십 액션</h2>
-			            		        			        <div class="action-buttons">
-			            		        			            <button id="cancel-membership-button" style="background-color: #dc3545;">멤버십 취소</button>
-			            		        			            <button id="reactivate-canceled-membership-button" style="background-color: #ffc107; color: #212529;">취소된 멤버십 재활성화</button>
-			            		        			        </div>
+			            		        		        <h2>멤버십 액션</h2>
+			            		        		        <div class="action-buttons">
+			            		        		            <button id="cancel-membership-button" style="background-color: #dc3545;">멤버십 취소</button>
+			            		        		            <button id="reactivate-canceled-membership-button" style="background-color: #ffc107; color: #212529;">취소된 멤버십 재활성화</button>
+			            		        		        </div>
 			
-			            		        			        <hr style="margin: 30px 0;">
+			            		        		        <hr style="margin: 30px 0;">
 			
-			            		        			        <h2>관리자 액션 (userId 필요)</h2>
-			            		        			        <div class="form-group">
-			            		        			            <label for="admin-user-id">대상 User ID</label>
-			            		        			            <input type="number" id="admin-user-id" placeholder="대상 사용자의 ID 입력">
-			            		        			        </div>
-			            		        			        <div class="action-buttons">
-			            		        			            <button id="ban-membership-button" style="background-color: #fd7e14;">멤버십 정지 (Ban)</button>
-			            		        			            <button id="unban-membership-button" style="background-color: #20c997;">멤버십 정지 해제 (Unban)</button>
-			            		        			        </div>
+			            		        		        <h2>관리자 액션 (userId 필요)</h2>
+			            		        		        <div class="form-group">
+			            		        		            <label for="admin-user-id">대상 User ID</label>
+			            		        		            <input type="number" id="admin-user-id" placeholder="대상 사용자의 ID 입력">
+			            		        		        </div>
+			            		        		        <div class="action-buttons">
+			            		        		            <button id="ban-membership-button" style="background-color: #fd7e14;">멤버십 정지 (Ban)</button>
+			            		        		            <button id="unban-membership-button" style="background-color: #20c997;">멤버십 정지 해제 (Unban)</button>
+			            		        		        </div>
 			
-			            		        			        <hr style="margin: 30px 0;">
+			            		        		        <hr style="margin: 30px 0;">
 			
-			            		        			        <div id="api-status">
-			            		        			            <h3>API 상태</h3>
-			            		        			            <pre>API 호출 결과가 여기에 표시됩니다.</pre>
-			            		        			        </div>			            			    </div>
+			            		        		        <div id="api-status">
+			            		        		            <h3>API 상태</h3>
+			            		        		            <pre>API 호출 결과가 여기에 표시됩니다.</pre>
+			            		        		        </div>			            			    </div>
 			
 			            			    <script>
 			            			        const clientKey = '__CLIENT_KEY__';
@@ -222,6 +225,66 @@ public class TossPaymentTestController {
 			</body>
 			</html>
 			""";
-		return htmlContent.replace("__CLIENT_KEY__", clientKey);
+		return htmlContent
+			.replace("__CLIENT_KEY__", clientKey)
+			.replace("__ORDER_NAME__", orderName)
+			.replace("__AMOUNT__", String.valueOf(amount));
+	}
+
+	@GetMapping("/payment/success")
+	@ResponseBody
+	public String getSuccessPage() {
+		return """
+			<!DOCTYPE html>
+			<html lang="ko">
+			<head>
+			    <meta charset="UTF-8">
+			    <title>결제 성공</title>
+			    <style>
+			        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; padding: 20px; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+			        .container { max-width: 600px; text-align: center; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+			        h1 { color: #28a745; }
+			        p { font-size: 1.2rem; }
+			    </style>
+			</head>
+			<body>
+			    <div class="container">
+			        <h1>결제 성공</h1>
+			        <p>결제가 성공적으로 완료되었습니다.</p>
+			    </div>
+			</body>
+			</html>
+			""";
+	}
+
+	@GetMapping("/payment/fail")
+	@ResponseBody
+	public String getFailPage(@RequestParam(required = false) String message,
+		@RequestParam(required = false) String code) {
+		return String.format("""
+			<!DOCTYPE html>
+			<html lang="ko">
+			<head>
+			    <meta charset="UTF-8">
+			    <title>결제 실패</title>
+			    <style>
+			        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; padding: 20px; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+			        .container { max-width: 600px; text-align: center; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+			        h1 { color: #dc3545; }
+			        .reason { background-color: #e9ecef; padding: 15px; border-radius: 5px; margin-top: 20px; text-align: left; }
+			    </style>
+			</head>
+			<body>
+			    <div class="container">
+			        <h1>결제 실패</h1>
+			        <p>결제 처리 중 오류가 발생했습니다.</p>
+			        <div class="reason">
+			            <strong>사유:</strong> %s <br>
+			            <strong>에러 코드:</strong> %s
+			        </div>
+			    </div>
+			</body>
+			</html>
+			""", message, code);
 	}
 }

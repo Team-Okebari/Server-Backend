@@ -46,9 +46,7 @@ spring:
 
 oauth2:
   redirect-uri:
-    success: http://localhost:8080/login-test-page
-    #success: http://localhost:5173/oauth2/redirect
+    success: ${OAUTH2_REDIRECT_URI_SUCCESS}
   logout:
     redirect-uri:
-      kakao: http://localhost:8080/login-test-page
-      #kakao: http://localhost:5173/login
+      kakao: ${OAUTH2_LOGOUT_REDIRECT_URI_KAKAO}
