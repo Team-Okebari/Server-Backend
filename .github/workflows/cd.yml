@@ -23,8 +23,8 @@ jobs:
           # --- 로그 디렉토리 권한 문제 해결 ---
           echo "Creating and setting permissions for log directory..."
           mkdir -p ./logs
-          # 컨테이너의 'spring' 사용자(UID 1001)가 쓸 수 있도록 소유권을 변경합니다.
-          sudo chown -R 1001:1001 ./logs
+          # 컨테이너의 사용자가 쓸 수 있도록 권한을 부여합니다.
+          sudo chmod -R 777 ./logs
 
           # === .env 파일 생성 시작 ===
           echo "Creating .env file from GitHub Secrets..."
