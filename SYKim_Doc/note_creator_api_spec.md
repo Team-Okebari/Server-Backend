@@ -17,45 +17,113 @@
 
 ## API 요약 테이블
 
-| 구분 | Method | Path | 권한 | 설명 |
-| --- | --- | --- | --- | --- |
-| Auth | POST | `/api/auth/signup` | 공개 | 회원가입 |
-| Auth | POST | `/api/auth/login` | 공개 | 로그인 및 토큰 발급 |
-| Auth | POST | `/api/auth/reissue` | 로그인 | Refresh Token 기반 Access Token 재발급 |
-| Auth | POST | `/api/auth/logout` | 로그인 | Access/Refresh Token 무효화 |
-| Notes | GET | `/api/notes/published/today-cover` | 공개 | 온보딩 이후 메인 커버 조회 |
-| Notes | GET | `/api/notes/published/today-detail` | USER/ADMIN | 구독자 여부에 따라 본문/미리보기 제공 |
-| Notes | GET | `/api/notes/published/today-preview` | USER/ADMIN | 무료 구독자용 미리보기 |
-| Notes | GET | `/api/notes/archived` | USER/ADMIN | 지난 노트 목록/검색 |
-| Notes | GET | `/api/notes/archived/{noteId}` | USER/ADMIN(구독) | 지난 노트 상세 |
-| Notes | POST | `/api/notes/{noteId}/bookmark` | USER/ADMIN | 북마크 토글 |
-| Notes | GET | `/api/notes/bookmarks` | USER/ADMIN | 북마크 목록 |
-| Admin Notes | POST | `/api/admin/notes` | ADMIN | 노트 생성 |
-| Admin Notes | PUT | `/api/admin/notes/{noteId}` | ADMIN | 노트 수정 |
-| Admin Notes | DELETE | `/api/admin/notes/{noteId}` | ADMIN | 노트 삭제 |
-| Admin Notes | GET | `/api/admin/notes` | ADMIN | 노트 목록 (페이지네이션) |
-| Answers | POST | `/api/notes/questions/{questionId}/answer` | USER | 답변 생성 |
-| Answers | PUT | `/api/notes/questions/{questionId}/answer` | USER | 답변 수정 |
-| Answers | DELETE | `/api/notes/questions/{questionId}/answer` | USER | 답변 삭제 |
+| # | 구분 | Method | Path | 권한 | 설명 |
+|---|------|--------|------|------|-----|
+| 1.1 | Auth | POST | `/api/auth/signup` | 공개 | 회원가입 |
+| 1.2 | Auth | POST | `/api/auth/login` | 공개 | 로그인 및 토큰 발급 |
+| 1.3 | Auth | POST | `/api/auth/reissue` | 로그인 | Refresh Token 기반 Access Token 재발급 |
+| 1.4 | Auth | POST | `/api/auth/logout` | 로그인 | Access/Refresh Token 무효화 |
+| 2.1 | Notes | GET | `/api/notes/published/today-cover` | 공개 | 온보딩 이후 메인 커버 조회 |
+| 2.2 | Notes | GET | `/api/notes/published/today-detail` | USER/ADMIN | 구독자 여부에 따라 본문/미리보기 제공 |
+| 2.3 | Notes | GET | `/api/notes/published/today-preview` | USER/ADMIN | 무료 구독자용 미리보기 |
+| 2.4 | Notes | GET | `/api/notes/archived` | USER/ADMIN | 지난 노트 목록/검색 |
+| 2.5 | Notes | GET | `/api/notes/archived/{noteId}` | USER/ADMIN | 지난 노트 상세/프리뷰 (구독 상태에 따라 분기) |
+| 2.6 | Notes | POST | `/api/notes/{noteId}/bookmark` | USER/ADMIN | 북마크 토글 |
+| 2.7 | Notes | GET | `/api/notes/bookmarks` | USER/ADMIN | 북마크 목록/검색 |
+| 3.1 | Admin Notes | POST | `/api/admin/notes` | ADMIN | 노트 생성 |
+| 3.2 | Admin Notes | PUT | `/api/admin/notes/{noteId}` | ADMIN | 노트 수정 |
+| 3.3 | Admin Notes | DELETE | `/api/admin/notes/{noteId}` | ADMIN | 노트 삭제 |
+| 3.4 | Admin Notes | GET | `/api/admin/notes` | ADMIN | 노트 목록 (페이지네이션) |
+| 3.5 | Admin Notes | POST | `/api/notes/questions/{questionId}/answer` | USER | 답변 생성 |
+| 3.6 | Admin Notes | PUT | `/api/notes/questions/{questionId}/answer` | USER | 답변 수정 |
+| 3.7 | Admin Notes | DELETE | `/api/notes/questions/{questionId}/answer` | USER | 답변 삭제 |
+| 4.1 | Creators | POST | `/api/admin/creators` | ADMIN | 작가 등록 |
+| 4.2 | Creators | GET | `/api/admin/creators` | ADMIN | 작가 목록 |
+| 4.3 | Creators | GET | `/api/admin/creators/{creatorId}` | ADMIN | 작가 상세 |
+| 4.4 | Creators | PUT | `/api/admin/creators/{creatorId}` | ADMIN | 작가 수정 |
+| 4.5 | Creators | DELETE | `/api/admin/creators/{creatorId}` | ADMIN | 작가 삭제 |
 
 ---
 
 ## Front-End Quick Reference
 
-| 구분 | Method | Path | 인증/역할 | 요청 파라미터 | 핵심 응답 데이터 |
-| --- | --- | --- | --- | --- | --- |
-| 커버 | GET | `/api/notes/published/today-cover` | 없음 | 없음 | `NoteCoverResponse { title, teaser, mainImageUrl, creatorName, creatorJobTitle, publishedAt }` |
-| 오늘 상세 | GET | `/api/notes/published/today-detail` | 토큰 (USER/ADMIN) | 없음 | `TodayPublishedResponse { accessible, note?, preview? }` |
-| 오늘 미리보기 | GET | `/api/notes/published/today-preview` | 토큰 (USER/ADMIN) | 없음 | `NotePreviewResponse { id, cover, overviewPreview, externalLink, creator }` |
-| 지난 노트 목록 | GET | `/api/notes/archived` | 토큰 (USER/ADMIN) | `keyword`, `page`, `size` | `Page<ArchivedNoteSummaryResponse { id, tagText, title, mainImageUrl, teaser }>` |
-| 지난 노트 상세 | GET | `/api/notes/archived/{noteId}` | 토큰 (USER/ADMIN) + 유료 구독 | `noteId` | `NoteResponse` 전체 구조 |
-| 북마크 토글 | POST | `/api/notes/{noteId}/bookmark` | 토큰 (USER/ADMIN) | `noteId` | `{ bookmarked: boolean }` |
-| 북마크 목록 | GET | `/api/notes/bookmarks` | 토큰 (USER/ADMIN) | 없음 | `BookmarkListItemResponse[] { title, mainImageUrl, creatorName, creatorJobTitle }` |
-| 답변 생성 | POST | `/api/notes/questions/{questionId}/answer` | 토큰 (USER) | `questionId` + `NoteAnswerRequest { answerText }` | `NoteAnswerResponse { answerText }` |
-| 답변 수정 | PUT | `/api/notes/questions/{questionId}/answer` | 토큰 (USER) | `questionId` + `NoteAnswerRequest { answerText }` | 없음 (`204`) |
-| 답변 삭제 | DELETE | `/api/notes/questions/{questionId}/answer` | 토큰 (USER) | `questionId` | 없음 (`204`) |
+| # | API | 인증/역할 | 요청 파라미터 | 프론트 수신 필드 |
+|---|-----|-----------|---------------|------------------|
+| 2.1 | `GET /api/notes/published/today-cover` | 공개 | 없음 | `NoteCoverResponse { title, teaser, mainImageUrl, creatorName, creatorJobTitle, publishedDate }` |
+| 2.3 | `GET /api/notes/published/today-preview` | USER / ADMIN | 없음 | `NotePreviewResponse { id, cover { title, mainImageUrl, creatorName, creatorJobTitle, publishedDate }, overview { sectionTitle, bodyText(<=100자), imageUrl } }` |
+| 2.2 | `GET /api/notes/published/today-detail` | USER / ADMIN | 없음 | `TodayPublishedResponse { accessible, note? = NoteResponse 전체 필드, preview? = NotePreviewResponse 전체 필드 }` |
+| 2.4 | `GET /api/notes/archived` | USER / ADMIN | `keyword`, `page`, `size` | `Page<ArchivedNoteSummaryResponse { id, tagText, title, mainImageUrl, creatorName, publishedDate }>` |
+| 2.5 | `GET /api/notes/archived/{noteId}` | USER / ADMIN | `noteId` | `ArchivedNoteViewResponse { accessible, note? = NoteResponse 전체 필드, preview? = NotePreviewResponse 전체 필드 }` |
+| 2.6 | `POST /api/notes/{noteId}/bookmark` | USER / ADMIN | `noteId` | `{ bookmarked: boolean }` |
+| 2.7 | `GET /api/notes/bookmarks?keyword` | USER / ADMIN | `keyword`(선택) | `BookmarkListItemResponse[] { noteId, title, mainImageUrl, creatorName, tagText }` |
+| 3.1 | `POST /api/admin/notes` | ADMIN | `NoteCreateRequest` | `Long` (생성 ID) |
+| 3.2 | `PUT /api/admin/notes/{noteId}` | ADMIN | `noteId`, `NoteCreateRequest` | `NoteResponse` (필드 목록 아래 참고) |
+| 3.3 | `DELETE /api/admin/notes/{noteId}` | ADMIN | `noteId` | 없음 (`200`) |
+| 3.4 | `GET /api/admin/notes` | ADMIN | `page`, `size` | `Page<NoteResponse>` |
+| 3.5 | `POST /api/notes/questions/{questionId}/answer` | USER | `questionId`, `NoteAnswerRequest { answerText }` | `NoteAnswerResponse { answerText }` |
+| 3.6 | `PUT /api/notes/questions/{questionId}/answer` | USER | 동일 | `NoteAnswerResponse { answerText }` |
+| 3.7 | `DELETE /api/notes/questions/{questionId}/answer` | USER | `questionId` | 없음 (204) |
+| 3.8 | `GET /api/notes/questions/{questionId}` | USER / ADMIN | `questionId` | `NoteQuestionDto { questionText }`, `NoteAnswerResponse? { answerText }` |
+| 4.1 | `POST /api/admin/creators` | ADMIN | `CreatorRequest` | 생성된 `creatorId` (`Long`) |
+| 4.2 | `GET /api/admin/creators` | ADMIN | 없음 | `CreatorSummaryDto[] { id, name, bio, jobTitle, profileImageUrl, instagramUrl, youtubeUrl, behanceUrl, xUrl, blogUrl, newsUrl }` |
+| 4.3 | `GET /api/admin/creators/{creatorId}` | ADMIN | `creatorId` | `CreatorResponse { id, name, bio, jobTitle, profileImageUrl, instagramUrl, youtubeUrl, behanceUrl, xUrl, blogUrl, newsUrl }` |
+| 4.4 | `PUT /api/admin/creators/{creatorId}` | ADMIN | `creatorId`, `CreatorRequest` | 없음 (204) |
+| 4.5 | `DELETE /api/admin/creators/{creatorId}` | ADMIN | `creatorId` | 없음 (204) |
 
-> [2025-11-05] 미리보기 응답(`NotePreviewResponse`), `creatorId` 필수 검증, 로그아웃 API 반환 형식을 최신 코드 기준으로 갱신했습니다.
+> 참고: `GET /api/admin/notes/{noteId}` 역시 `NoteResponse` 구조를 그대로 반환하며, 3.1/3.2에서 사용하는 DTO와 동일합니다.
+
+### DTO 전체 필드 참고
+
+#### 1) `NoteResponse`
+| 필드 | 설명 |
+|------|------|
+| `id`, `status`, `tagText` | 노트 메타 |
+| `cover` | `{ title, teaser(2.1 한정), mainImageUrl, creatorName, creatorJobTitle, publishedDate(yyyy-MM-dd) }` |
+| `overview` | `{ sectionTitle, bodyText, imageUrl }` |
+| `retrospect` | `{ sectionTitle, bodyText }` |
+| `processes[]` | 각 `{ position, sectionTitle, bodyText, imageUrl }` |
+| `question` | `{ questionText }` |
+| `answer` | `{ answerText }` 또는 `null` |
+| `creatorId`, `creatorJobTitle` | Creator 엔티티에서 추출 |
+| `externalLink` | `{ sourceUrl }` (없으면 `null`) |
+| `creator` | `{ id, name, jobTitle, bio, profileImageUrl, instagramUrl, youtubeUrl, behanceUrl, xUrl, blogUrl, newsUrl }` |
+| `publishedAt`, `archivedAt`, `createdAt`, `updatedAt` | 타임스탬프 |
+
+#### 2) `NotePreviewResponse`
+| 필드 | 설명 |
+|------|------|
+| `id` | 노트 ID |
+| `cover` | `{ title, mainImageUrl, creatorName, creatorJobTitle, publishedDate(yyyy-MM-dd) }` (`teaser`는 today-cover(2.1) 외 API에서는 null) |
+| `overview` | `{ sectionTitle, bodyText(<=100자), imageUrl }` |
+
+- `overview.bodyText`는 `NoteMapper.toPreview`에서 100자로 잘려 내려갑니다.
+
+#### 3) `ArchivedNoteSummaryResponse`
+| 필드 | 설명 |
+|------|------|
+| `id` | 노트 ID |
+| `tagText` | 태그/분류 문자열 |
+| `title` | 커버 제목 |
+| `mainImageUrl` | 커버 대표 이미지 |
+| `creatorName` | 작가 이름 |
+| `publishedDate` | 게시일 (`yyyy-MM-dd`) |
+
+#### 4) `BookmarkListItemResponse`
+| 필드 | 설명 |
+|------|------|
+| `noteId` | 노트 ID (상세 이동용) |
+| `title` | 커버 제목 |
+| `mainImageUrl` | 카드 썸네일 |
+| `creatorName` | 작가 이름 |
+| `tagText` | 검색/필터 표시용 태그 |
+
+#### 5) `CreatorSummaryDto` / `CreatorResponse`
+| DTO | 필드 |
+|-----|-------|
+| `CreatorSummaryDto` | `id`, `name`, `bio`, `jobTitle`, `profileImageUrl`, `instagramUrl`, `youtubeUrl`, `behanceUrl`, `xUrl`, `blogUrl`, `newsUrl` |
+| `CreatorResponse` | Summary와 동일한 필드 세트 (현재 버전에서는 추가 필드 없음) |
+
+> [2025-11-05] today-preview/archived 프리뷰 분기, Bookmark 검색 결과 필드, `ArchivedNoteViewResponse` 구조를 최신 코드와 동기화했습니다.
 
 ---
 
@@ -167,7 +235,7 @@
     "mainImageUrl": "https://...",
     "creatorName": "작성자",
     "creatorJobTitle": "일러스트레이터",
-    "publishedAt": "2025-11-04T00:00:00"
+    "publishedDate": "2025-11-04"
   },
   "error": null,
   "timestamp": "..."
@@ -193,11 +261,11 @@
       "tagText": "워터컬러, 드로잉",
       "cover": {
         "title": "금일 노트 타이틀",
-        "teaser": "채도가 낮은 봄빛을 담는 과정",
+        "teaser": null,
         "mainImageUrl": "https://cdn.example.com/note/today_main.jpg",
         "creatorName": "어트바이트",
         "creatorJobTitle": "일러스트레이터",
-        "publishedAt": "2025-11-05T00:00:00"
+        "publishedDate": "2025-11-05"
       },
       "overview": {
         "sectionTitle": "이번 작업을 시작한 이유",
@@ -239,7 +307,7 @@
         "blogUrl": "https://artbite.example.com",
         "newsUrl": null
       },
-      "publishedAt": "2025-11-05T00:00:00",
+      "publishedAt": "2025-11-05",
       "archivedAt": null,
       "createdAt": "2025-11-03T09:12:00",
       "updatedAt": "2025-11-04T22:10:00"
@@ -264,20 +332,16 @@
       "id": 101,
       "cover": {
         "title": "금일 노트 타이틀",
-        "teaser": "채도가 낮은 봄빛을 담는 과정",
+        "teaser": null,
         "mainImageUrl": "https://cdn.example.com/note/today_main.jpg",
         "creatorName": "어트바이트",
         "creatorJobTitle": "일러스트레이터",
-        "publishedAt": "2025-11-05T00:00:00"
+        "publishedDate": "2025-11-05"
       },
-      "overviewPreview": "이번 작업에서는 컬러 팔레트를 재구성했습니다...",
-      "externalLink": { "sourceUrl": "https://blog.example.com/behind-story" },
-      "creator": {
-        "id": 12,
-        "name": "어트바이트",
-        "bio": "수채화 기반 일러스트 작가",
-        "jobTitle": "일러스트레이터",
-        "profileImageUrl": "https://cdn.example.com/creator/12.jpg"
+      "overview": {
+        "sectionTitle": "이번 작업을 시작한 이유",
+        "bodyText": "이번 작업에서는 컬러 팔레트를 재구성했습니다...",
+        "imageUrl": "https://cdn.example.com/note/overview.jpg"
       }
     }
   },
@@ -286,6 +350,8 @@
 }
 ```
 
+- `preview.cover.teaser`는 미리보기/상세 응답에서 null로 내려가며, 커버 전용 API(2.1)에서만 값이 존재합니다.
+- `preview.overview.bodyText`는 100자를 초과하면 `NoteMapper.toPreview`에서 잘라냅니다.
 - 에러 코드 없음 (구독자 여부 분기로 대체하므로 `NOTE_ACCESS_DENIED` 미사용).
 
 ### 2.3 오늘 노트 미리보기
@@ -301,22 +367,16 @@
     "id": 101,
     "cover": {
       "title": "금일 노트 타이틀",
-      "teaser": "10분 요약",
+      "teaser": null,
       "mainImageUrl": "https://cdn.example.com/note/today_main.jpg",
       "creatorName": "어트바이트",
       "creatorJobTitle": "일러스트레이터",
-      "publishedAt": "2025-11-05T00:00:00"
+      "publishedDate": "2025-11-05"
     },
-    "overviewPreview": "이번 작업에서는 컬러 팔레트를 재구성했습니다...",
-    "externalLink": {
-      "sourceUrl": "https://blog.example.com/behind-story"
-    },
-    "creator": {
-      "id": 12,
-      "name": "어트바이트",
-      "bio": "수채화 기반 일러스트 작가",
-      "jobTitle": "일러스트레이터",
-      "profileImageUrl": "https://cdn.example.com/creator/12.jpg"
+    "overview": {
+      "sectionTitle": "이번 작업을 시작한 이유",
+      "bodyText": "이번 작업에서는 컬러 팔레트를 재구성했습니다...",
+      "imageUrl": "https://cdn.example.com/note/overview.jpg"
     }
   },
   "error": null,
@@ -324,8 +384,9 @@
 }
 ```
 
-- `overviewPreview`: 개요 본문 앞 100자를 잘라 문자열로 전달.
-- `creator`: `CreatorSummaryDto`와 동일한 구조로 이름, 직함, 프로필 이미지, SNS 링크 등을 포함.
+- `cover.teaser`: 미리보기에서는 null. 히어로 섹션에서만 필요하므로 `/today-cover`(2.1)만 값 제공.
+- `overview.bodyText`: 개요 본문 앞 100자를 잘라 문자열로 전달.
+- 별도의 `creator`/`externalLink` 필드는 포함되지 않습니다. 작가 정보는 커버, 상세 응답으로만 내려갑니다.
 - **에러**
   - `N001`: 오늘 게시된 노트가 없을 때
 
@@ -346,14 +407,16 @@
         "tagText": "워터컬러",
         "title": "지난주: 팔레트 만들기",
         "mainImageUrl": "https://cdn.example.com/note/95_main.jpg",
-        "teaser": "채도가 낮은 봄빛을 담는 과정"
+        "creatorName": "김작가",
+        "publishedDate": "2024-05-30"
       },
       {
         "id": 94,
         "tagText": "스케치",
         "title": "지난주: 콘셉트 스케치",
         "mainImageUrl": "https://cdn.example.com/note/94_main.jpg",
-        "teaser": "콘셉트 스케치 과정을 공유합니다"
+        "creatorName": "박작가",
+        "publishedDate": "2024-05-29"
       }
     ],
     "pageable": {
@@ -372,74 +435,18 @@
 ```
 
 - `tagText`: 검색 키워드 필터용 문자열 (미입력 시 `null`)
-- `teaser`: 커버 요약 문구. 지난 노트 카드에서 서브텍스트로 사용.
+- `creatorName`: 지난 노트를 작성한 작가 이름.
+- `publishedDate`: 게시 일시에서 `yyyy-MM-dd`까지 잘라낸 날짜 문자열.
 - **에러**: 없음 (빈 페이지 시 `content=[]`)
 
-### 2.5 지난 노트 상세
+### 2.5 지난 노트 상세/프리뷰
 
 - **GET** `/api/notes/archived/{noteId}`
-- **권한**: USER / ADMIN + 유료 구독
-- **응답** `NoteResponse`
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": 95,
-    "status": "ARCHIVED",
-    "tagText": "워터컬러",
-    "cover": {
-      "title": "지난주: 팔레트 만들기",
-      "teaser": "색 조합 실험",
-      "mainImageUrl": "https://cdn.example.com/note/95_main.jpg",
-      "creatorName": "어트바이트",
-      "creatorJobTitle": "일러스트레이터",
-      "publishedAt": "2025-11-02T00:00:00"
-    },
-    "overview": {
-      "sectionTitle": "Overview",
-      "bodyText": "이번 작업은 컬러 팔레트 연구가 핵심입니다...",
-      "imageUrl": "https://cdn.example.com/note/95_overview.jpg"
-    },
-    "retrospect": {
-      "sectionTitle": "Retrospect",
-      "bodyText": "되돌아보니 보색 대비를 더 살리고 싶었습니다..."
-    },
-    "processes": [
-      {
-        "position": 1,
-        "sectionTitle": "Process 1",
-        "bodyText": "초기 스케치를 진행했습니다...",
-        "imageUrl": "https://cdn.example.com/note/95_proc1.jpg"
-      },
-      {
-        "position": 2,
-        "sectionTitle": "Process 2",
-        "bodyText": "컬러 팔레트를 확정했습니다...",
-        "imageUrl": "https://cdn.example.com/note/95_proc2.jpg"
-      }
-    ],
-    "question": { "questionText": "이번 작업에서 가장 어려웠던 점은?" },
-    "answer": { "answerText": "색감 균형을 잡는 데 시간이 걸렸습니다." },
-    "creatorId": 12,
-    "externalLink": { "sourceUrl": "https://blog.example.com/archive/95" },
-    "creator": {
-      "id": 12,
-      "name": "어트바이트",
-      "profileImageUrl": "https://cdn.example.com/creator/12.jpg"
-    },
-    "publishedAt": "2025-11-02T00:00:00",
-    "archivedAt": "2025-11-03T00:00:00",
-    "createdAt": "2025-10-30T08:12:00",
-    "updatedAt": "2025-10-31T10:05:00"
-  },
-  "error": null,
-  "timestamp": "2025-11-05T02:52:00"
-}
-```
-
+- **권한**: USER / ADMIN
+- **응답** `ArchivedNoteViewResponse { accessible, note?, preview? }`
+  - `accessible=true` (유료 구독자) → `note`에 `NoteResponse` 전체 제공
+  - `accessible=false` (비구독자) → `preview`에 `NotePreviewResponse`(커버 + 개요 100자) 제공
 - **에러**
-  - `N003`: 구독 중이 아닌 경우
   - `N001`: 존재하지 않는 노트
   - `N002`: 요청한 노트가 ARCHIVED 상태가 아닌 경우
 
@@ -461,10 +468,11 @@
 - **에러**
   - `N001`: 노트 미존재
 
-### 2.7 북마크 목록
+### 2.7 북마크 목록/검색
 
 - **GET** `/api/notes/bookmarks`
 - **권한**: USER / ADMIN
+- **Query**: `keyword`(선택, 작가명/태그/제목 부분 일치 검색)
 - **응답** `BookmarkListItemResponse[]`
 
 ```json
@@ -472,16 +480,18 @@
   "success": true,
   "data": [
     {
+      "noteId": 21,
       "title": "봄날의 수채화 정리",
       "mainImageUrl": "https://cdn.example.com/note/main_20240201.jpg",
       "creatorName": "어트바이트",
-      "creatorJobTitle": "마케터"
+      "tagText": "워터컬러"
     },
     {
+      "noteId": 95,
       "title": "지난주: 팔레트 만들기",
       "mainImageUrl": "https://cdn.example.com/note/95_main.jpg",
       "creatorName": "어트바이트",
-      "creatorJobTitle": "그래픽디자이너"
+      "tagText": "팔레트"
     }
   ],
   "error": null,
@@ -489,8 +499,8 @@
 }
 ```
 
-- `data`는 사용자가 최근에 저장한 순으로 정렬됩니다(`createdAt desc`).
-- `title`/`mainImageUrl`/`creatorName`/`creatorJobTitle`만 내려 UI 카드에서 바로 사용할 수 있도록 최소 필드만 포함합니다.
+- `keyword` 미전달 시 저장 순(`createdAt desc`)으로 전체 목록을 반환한다.
+- `tagText`는 UI 검색/필터 용도로만 제공하며, 현재 카드에는 제목·작가명·이미지만 노출된다.
 - **에러**
   - `N001`: 노트 미존재 (토글 직후 레이스 컨디션 등)
 
@@ -670,7 +680,7 @@
           "name": "어드민",
           "profileImageUrl": "https://..."
         },
-        "publishedAt": "2025-02-01T00:00:00",
+        "publishedAt": "2025-02-01",
         "archivedAt": null,
         "createdAt": "2025-01-31T10:12:00",
         "updatedAt": "2025-01-31T10:12:00"
@@ -865,10 +875,11 @@
 ## 6. 응답 DTO 참고
 
 - `NoteResponse`: 커버, 개요, 회고, 프로세스(2건), 질문, 답변, 작가 정보, 외부 링크, 상태/시각 필드 포함.
-- `NotePreviewResponse`: 커버, 개요 프리뷰(본문 100자 문자열), 외부 링크, 작가 요약.
+- `NotePreviewResponse`: 커버(creator 포함, teaser null) + 개요 프리뷰(`NoteOverviewDto`, 본문 100자 이내)만 포함.
 - `TodayPublishedResponse`: `accessible`, `note`, `preview` 세 필드로 구성.
-- `ArchivedNoteSummaryResponse`: `id`, `tagText`, `title`, `mainImageUrl`, `teaser`만 포함해 카드 렌더링에 바로 활용.
-- `BookmarkListItemResponse`: `title`, `mainImageUrl`, `creatorName`, `creatorJobTitle`.
+- `ArchivedNoteViewResponse`: `accessible`, `note`(구독자용), `preview`(비구독자용) 구조.
+- `ArchivedNoteSummaryResponse`: `id`, `tagText`, `title`, `mainImageUrl`, `creatorName`, `publishedDate`만 포함해 카드 렌더링에 바로 활용.
+- `BookmarkListItemResponse`: `noteId`, `title`, `mainImageUrl`, `creatorName`, `tagText`.
 - `CreatorSummaryDto`: 작가 기본 소개·직함 + SNS 링크 + 프로필 이미지.
 
 ---
@@ -890,3 +901,10 @@
 2. 멤버십(구독) 관련 백엔드 API가 추가되면 햄버거 메뉴 “멤버십” 항목에 연동.
 3. `SubscriptionService` 스텁을 실제 구독 조회 로직으로 교체.
 4. 필요 시 에러 코드 추가 (예: 북마크 중복, 질문 미존재 등). 이게 현재 내가 가지고 있는 파일이야. 이게 최신이야. 적용해.
+- **GET** `/api/notes/archived/{noteId}/preview`
+- **권한**: USER / ADMIN (유료 구독자는 403 반환 → 상세 API 이용)
+- **응답** `NotePreviewResponse`
+  - 커버 + 개요 100자 (`creator summary`, `externalLink` 미포함)
+  - 비구독자가 목록에서 노트를 선택하면 이 API로 간단한 프리뷰를 본 뒤 구독 CTA로 이동
+
+---

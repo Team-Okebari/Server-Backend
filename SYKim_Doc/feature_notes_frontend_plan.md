@@ -62,12 +62,12 @@ export interface NoteCoverDto {
   title: string;
   teaser: string;
   mainImageUrl: string;
+  creatorName?: string;
+  creatorJobTitle?: string;
 }
 
 export interface NoteCoverResponse extends NoteCoverDto {
-  creatorName?: string;
-  creatorJobTitle?: string;
-  publishedAt?: string;
+  publishedDate?: string;
 }
 
 export interface NoteOverviewDto {
@@ -150,6 +150,7 @@ export interface NoteResponse {
   processes: NoteProcessDto[];
   question?: NoteQuestionDto;
   creatorId: number;
+  creatorJobTitle?: string;
   externalLink?: NoteExternalLinkDto;
   publishedAt?: string;
   archivedAt?: string;
@@ -163,12 +164,18 @@ export interface NoteResponse {
 export interface NotePreviewResponse {
   id: number;
   cover: NoteCoverResponse;
-  overviewPreview?: string;
-  externalLink?: NoteExternalLinkDto;
-  creator?: CreatorSummaryDto;
+  overview: NoteOverviewDto | null;
 }
 
+// overview.bodyText는 백엔드에서 100자로 잘려 내려오며, preview 응답에는 creator/externalLink가 포함되지 않는다.
+
 export interface TodayPublishedResponse {
+  accessible: boolean;
+  note: NoteResponse | null;
+  preview: NotePreviewResponse | null;
+}
+
+export interface ArchivedNoteViewResponse {
   accessible: boolean;
   note: NoteResponse | null;
   preview: NotePreviewResponse | null;
@@ -179,17 +186,19 @@ export interface ArchivedNoteSummaryResponse {
   tagText?: string;
   title?: string;
   mainImageUrl?: string;
-  teaser?: string;
+  creatorName?: string;
+  publishedDate?: string; // yyyy-MM-dd
 }
 
 export interface BookmarkListItemResponse {
+  noteId: number;
   title: string;
   mainImageUrl: string;
   creatorName: string;
-  creatorJobTitle?: string;
+  tagText?: string;
 }
 ```
-- 목록에서는 `creatorJobTitle`을 이름 옆 보조 텍스트로 노출해 직업군을 구분한다.
+- 북마크 목록은 노트 상세 이동을 위해 `noteId`만 필요하며, 작가 직함은 노출하지 않는다. `keyword` 파라미터로 제목/작가/태그 검색이 가능하며, `tagText`는 검색 결과 하이라이트용으로 활용할 수 있다.
 
 ## 3. Axios 인스턴스 (`api/axiosInstance.ts`)
 
@@ -507,7 +516,7 @@ const PublishedNoteCard = ({ cover }: Props) => (
       {cover.creatorName}
       {cover.creatorJobTitle ? ` · ${cover.creatorJobTitle}` : ''}
     </small>
-    <small>{cover.publishedAt}</small>
+    <small>{cover.publishedDate}</small>
   </article>
 );
 
@@ -620,8 +629,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 - 관리자 폼 UI 설계(프로세스 2개 입력, 이미지 업로드).
 - 작가 선택 드롭다운(creatorId) 및 관련 링크 입력 필드 구성. creatorId는 필수값이므로 드롭다운 기본 선택/검증을 추가한다.
 - 작가 목록 조회 API(`GET /api/admin/creators` 가정) 연동 및 신규 작가 등록 플로우 별도 정의 필요.
-- 노트 상세 화면은 `GET /api/notes/published/today-preview`로 커버/개요 100자를 먼저 렌더링하고, 유료 구독자인 경우 `GET /api/notes/archived/{noteId}` 결과로 나머지 섹션을 덮어쓴다.
-- 메인 홈 화면은 `GET /api/notes/published/today-cover`로 금일 게시된 노트의 커버 데이터를 받아 히어로 섹션을 구성하고, 상세 페이지 진입 시 `GET /api/notes/published/today-preview` → (구독자라면) `GET /api/notes/published/today-detail` 또는 `GET /api/notes/archived/{noteId}` 순으로 로딩한다.
+- 노트 상세 화면은 `GET /api/notes/published/today-preview`로 커버/개요 100자를 먼저 렌더링하고, **유료 구독자**인 경우 `GET /api/notes/archived/{noteId}` 결과로 나머지 섹션을 덮어쓴다. **무료 사용자**는 `GET /api/notes/archived/{noteId}/preview`로 전용 프리뷰(커버+개요)만 노출한 뒤 구독 CTA로 이동한다.
+- 메인 홈 화면은 `GET /api/notes/published/today-cover`로 금일 게시된 노트의 커버 데이터를 받아 히어로 섹션을 구성하고, 상세 페이지 진입 시 `GET /api/notes/published/today-preview` → (구독자라면) `GET /api/notes/published/today-detail` 또는 `GET /api/notes/archived/{noteId}` / (비구독자라면) `GET /api/notes/archived/{noteId}/preview` 순으로 로딩한다.
 - `GET /api/notes/published/today-detail` 응답(`TodayPublishedResponse`)에서 `accessible` 값이 `false`이면 `preview` 필드만 내려오므로, 프리뷰 전용 UI를 그대로 유지하거나 멤버십 가입 유도 동작을 수행한다. `accessible`이 `true`인 경우에만 `note` 필드의 `NoteResponse` 데이터를 상세 뷰에 바인딩한다.
 - 상태 전환 UX: COMPLETED → IN_PROGRESS 버튼 제공.
 - 구독 결제 연동 플로우 확인(403 처리).

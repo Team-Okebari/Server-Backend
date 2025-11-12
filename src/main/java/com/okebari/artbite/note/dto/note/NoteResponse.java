@@ -1,5 +1,6 @@
 package com.okebari.artbite.note.dto.note;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,9 +20,10 @@ public record NoteResponse(
 	NoteQuestionDto question,
 	NoteAnswerResponse answer,
 	Long creatorId,
+	String creatorJobTitle,
 	NoteExternalLinkDto externalLink,
 	CreatorSummaryDto creator,
-	LocalDateTime publishedAt,
+	LocalDate publishedAt,
 	LocalDateTime archivedAt,
 	LocalDateTime createdAt,
 	LocalDateTime updatedAt

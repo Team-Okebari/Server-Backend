@@ -167,7 +167,7 @@ class NoteServiceTest {
 		return new NoteCreateRequest(
 			status,
 			"tag",
-			new NoteCoverDto("title", "teaser", "https://img.main"),
+			new NoteCoverDto("title", "teaser", "https://img.main", null, null),
 			new NoteOverviewDto("overview", "overview body", "https://img.overview"),
 			new NoteRetrospectDto("retro", "retro body"),
 			List.of(
@@ -184,7 +184,7 @@ class NoteServiceTest {
 		return new NoteUpdateRequest(
 			status,
 			"tag",
-			new NoteCoverDto("title", "teaser", "https://img.main"),
+			new NoteCoverDto("title", "teaser", "https://img.main", null, null),
 			new NoteOverviewDto("overview", "overview body", "https://img.overview"),
 			new NoteRetrospectDto("retro", "retro body"),
 			List.of(

@@ -125,7 +125,7 @@
 - `NoteQueryController`: `GET /api/notes/published/today-preview`로 금일 미리보기(커버 + 개요 100자)를 제공하고, `GET /api/notes/published/today-cover`로 온보딩 다음 메인화면에 노출할 커버만 전달합니다. `GET /api/notes/published/today-detail`은 `TodayPublishedResponse`를 반환해 구독자는 전체 본문(`accessible=true`, `note` 필드), 비구독자는 미리보기(`accessible=false`, `preview` 필드)만 내려줍니다. 지난 노트는 `GET /api/notes/archived/{noteId}`로 유료 구독자에게만 공개됩니다.
   - cover 응답에는 `creatorJobTitle`(Creator.jobTitle)이 추가되어 프론트 히어로 카드에 직함을 노출합니다.
   - 응답 규격은 기존 `CustomApiResponse` 활용.
-- 메인 화면은 `NoteCoverResponse`를 그대로 사용하고, 지난 노트 목록은 `ArchivedNoteSummaryResponse(id, tagText, title, mainImageUrl, teaser)`만 내려 간결한 카드를 구성합니다.
+- 메인 화면은 `NoteCoverResponse`를 그대로 사용하고, 지난 노트 목록은 `ArchivedNoteSummaryResponse(id, tagText, title, mainImageUrl, creatorName, publishedDate)`만 내려 간결한 카드를 구성합니다.
 - **사용자 답변 처리**
   - `NoteAnswer`는 사용자 입력 기반이라 선택 입력으로 구성하며, 답변과 작성자 ID 모두 null 허용. 답변이 처음 등록될 때만 `NoteQuestion`과 함께 persist 되고, 수정 시에는 기존 `NoteAnswer`를 재사용해 `answer.update(answerText)` 형태로 변경합니다.
   - `NoteAnswerService`는 질문 식별자와 로그인 사용자 ID를 이용해 권한 검증 후 답변을 생성/수정/삭제하고, `NoteMapper`를 통해 `NoteAnswerDto`로 변환합니다.

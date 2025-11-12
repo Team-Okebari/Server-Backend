@@ -4,7 +4,7 @@ CREATE TABLE memberships (
     status VARCHAR(20) NOT NULL,
     plan_type VARCHAR(50) NOT NULL,
     start_date TIMESTAMP NOT NULL,
-    end_date TIMESTAMP, -- 만료되거나 비활성 상태인 경우 null 허용, 활성 상태인 경우 항상 값을 가짐
+    end_date TIMESTAMP,
     consecutive_months INT NOT NULL DEFAULT 0,
     auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL,
