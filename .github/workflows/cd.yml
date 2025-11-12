@@ -82,7 +82,7 @@ jobs:
 
             # Build Docker image locally
             echo "Building Docker image: artbite-backend:${{ github.sha }}"
-            docker build --progress=plain -t artbite-backend:${{ github.sha }} -f ./Dockerfile .
+            docker build -t artbite-backend:${{ github.sha }} -f ./Dockerfile .
             
             echo "Stopping all services..."
             chmod +x ./infra/scripts/stop.sh
