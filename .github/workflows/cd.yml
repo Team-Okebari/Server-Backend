@@ -126,7 +126,7 @@ jobs:
             RETRY_INTERVAL=10
             
             for i in $(seq 1 $MAX_RETRIES); do
-              HEALTH_STATUS=$(curl -s -o /dev/null -w "%\{http_code}" "$HEALTH_CHECK_URL" || echo "000")
+              HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_CHECK_URL" || echo "000")
               if [ "$HEALTH_STATUS" -eq 200 ]; then
                 echo "Application is healthy!"
                 break
