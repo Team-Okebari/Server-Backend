@@ -33,7 +33,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          timeout: 1800   # <- 추가: SSH 명령 타임아웃 연장
+          timeout: 1800s   # <- 추가: SSH 명령 타임아웃 연장
           script: |
             set -euo pipefail # Add this for robust script execution
 
