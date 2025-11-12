@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. EC2에 필요한 파일 전송
+      # 1. EC2에 필요한 파일 전송
       - name: Copy deployment files to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -25,6 +25,20 @@ jobs:
           source: "docker-compose.yml,Dockerfile,build.gradle,settings.gradle,gradlew,gradle/,src/,infra/,prometheus/"
           target: ~/backend/
           overwrite: true
+
+      # 2. logs 디렉터리 생성 및 권한 부여
+      - name: Ensure logs directory exists and is writable
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            DEPLOY_DIR=~/backend
+            mkdir -p "$DEPLOY_DIR/logs"
+            chmod 0777 "$DEPLOY_DIR/logs"
+            echo "✅ logs directory created and writable"
 
       # 3. EC2에서 서비스 배포 및 시작
       - name: Deploy and start services on EC2
