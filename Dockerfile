@@ -35,7 +35,7 @@ RUN mkdir -p /app/logs && chown -R spring:spring /app/logs
 USER spring
 
 # 빌드 단계에서 생성된 JAR 파일을 복사합니다。
-COPY --from=build --chown=spring:spring /app/build/libs/*.jar app.jar
+COPY --from=build --chown=spring:spring /app/build/libs/artbite-0.0.1-SNAPSHOT.jar app.jar
 
 # 8080 포트를 외부에 노출합니다.
 EXPOSE 8080
