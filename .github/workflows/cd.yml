@@ -27,6 +27,7 @@ jobs:
           overwrite: true
 
       # 2. logs 디렉터리 생성 및 권한 부여
+      
       - name: Ensure logs directory exists and is writable
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -36,9 +37,10 @@ jobs:
           script: |
             set -euo pipefail
             DEPLOY_DIR=~/backend
-            mkdir -p "$DEPLOY_DIR/logs"
-            chmod 0777 "$DEPLOY_DIR/logs"
-            echo "✅ logs directory created and writable"
+            sudo mkdir -p "$DEPLOY_DIR/logs"
+            sudo chown $USER:$USER "$DEPLOY_DIR/logs"
+            sudo chmod 0777 "$DEPLOY_DIR/logs"
+            echo "✅ logs directory created, owned by $USER, writable"
 
       # 3. EC2에서 서비스 배포 및 시작
       - name: Deploy and start services on EC2
