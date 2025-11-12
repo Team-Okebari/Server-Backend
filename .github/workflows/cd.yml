@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
 
@@ -116,4 +116,3 @@ jobs:
             docker image prune -af
             
             echo "Deployment completed!"
-
