@@ -207,6 +207,17 @@ flowchart TD
 - **시간대 불일치**: 모든 날짜 계산을 `Clock` 주입 + `ZoneId.of("Asia/Seoul")`로 테스트 가능하게 구성.
 - **랜덤성 검증**: Selector 테스트에서 χ² 유사 검증으로 편향 감시, 메트릭으로 노트 노출 편중 확인.
 
+### 11.1 장애 시나리오별 운영 전략
+
+| 시나리오 | 감지 포인트 | 대응 전략 |
+|----------|-------------|-----------|
+| **① 스케줄러 지연/실패로 자정 이후 리마인드 미생성** | - `SchedulerSuccessCount` 메트릭이 0<br>- `note_reminder_digest`에서 `reminder_date = today` 행 미존재<br>- Grafana 알람 (자정+5분 이후 still 0) | 1) 자동 재시도: ShedLock이 실패하면 5분 간격 재시도 태스크 실행<br>2) 운영자 수동 버튼: Admin API `/admin/reminders/retry?date=`로 특정 일자만 재생성<br>3) Lazy selection fallback: 조회 API가 digest miss 감지 시, 즉시 `NoteReminderSelector`를 호출해 단건 생성 후 캐시/DB 저장<br>4) 장애 보고: Slack 알람 + Notion 장애 기록 남기기 |
+| **② 첫/두 번째 접속 판단 오류로 배너가 잘못 노출** | - `surfaceHint=BANNER`이면서 `firstVisitAt` null<br>- `surfaceHint=DEFERRED`인데 `firstVisitAt`이 이미 존재 | 1) 서버를 단일 근거로 사용: 첫 호출 시 `firstVisitAt` 없으면 무조건 기록 + `DEFERRED` 반환, 이후 요청에서는 기록 값 기준으로 분기<br>2) 백필 로직: `firstVisitAt`가 null인데 `bannerSeenAt`가 set되어 있으면 over-write 후 즉시 `BANNER` 반환<br>3) 모니터링: “오늘 firstVisit만 있고 bannerSeen 없음” 비율을 대시보드에 표시, 임계치 초과 시 알림<br>4) 재설정 API: 운영자가 사용자별 상태(`firstVisitAt`,`bannerSeenAt`,`dismissed`)를 초기화 할 수 있는 `/admin/reminders/reset` 제공 |
+| **③ 사용자가 ‘오늘은 그만 보기’ 눌렀는데 dismiss 상태가 반영되지 않음** | - 클라이언트에서 200/204 응답 미수신 로그<br>- 같은 날 `dismissed=false`인데 `/dismiss` 호출 수가 1 이상 | 1) API 응답 전 DB와 Redis 모두 업데이트하고, 실패 시 전체 작업을 재시도(재시도 3회, backoff)<br>2) 클라이언트 재시도 가이드: 실패 시 “다시 시도” 토스트 + 최대 3회 재요청<br>3) 조회 API에서 `dismissed_at` 타임스탬프와 현재 시간이 5분 내인데도 `dismissed=false`면 강제로 true로 보정 (idempotent update)<br>4) 실패 로그 적재: dismiss 실패 시 사용자·노트·오류코드를 Kibana에 남겨 수동 보정 가능하게 함 |
+| **④ 하루 종일 배너가 보여야 하는데 전혀 안 보이는 경우** | - `surfaceHint=NONE` 비율이 비정상적으로 높음<br>- `dismissed=true`가 자정 이후에도 유지 | 1) 조회 API에서 `reminder_date < today` 인 레코드는 자동 초기화(자정 리셋이 실패했을 때 self-heal)<br>2) Redis 캐시 장애 대비: 캐시 miss 시 DB fallback 후 다시 SET<br>3) “오늘 다시 보기” 수동 버튼 제공 → 해당 버튼은 `/dismiss` 반대 동작으로 상태 초기화 |
+
+> 위 전략은 전부 운영 리플레이 가능한 로그/메트릭을 전제로 한다. `NoteReminderAudit` 테이블(사용자, 날짜, 상태 변경)을 추가해 추후 “왜 배너가 떴/안 떴는지” 역추적 가능하도록 설계한다.
+
 ---
 
 ## 12. 다음 액션
@@ -302,3 +313,247 @@ sequenceDiagram
         end
     end
 ```
+
+---
+
+## 14. Reference Code Snippets
+
+> 실제 구현 시 참고할 골격 코드. 필드/예외 처리/로그는 상황에 맞게 확장한다.
+
+### 14.1 엔티티 & 레포지토리
+
+```java
+@Entity
+@Table(name = "note_reminder_digest",
+	uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "reminder_date"}))
+public class NoteReminder {
+
+	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	@Column(name = "user_id", nullable = false)
+	private Long userId;
+
+	@Column(name = "note_id", nullable = false)
+	private Long noteId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "source_type", nullable = false)
+	private ReminderSourceType sourceType;
+
+	@Column(name = "reminder_date", nullable = false)
+	private LocalDate reminderDate;
+
+	@Column(name = "payload_snapshot", columnDefinition = "jsonb")
+	private String payloadSnapshot;
+
+	private LocalDateTime firstVisitAt;
+	private LocalDateTime bannerSeenAt;
+	private LocalDateTime bannerClosedAt;
+	private boolean dismissed;
+	private LocalDateTime dismissedAt;
+
+	public void markFirstVisit(LocalDateTime now) {
+		if (this.firstVisitAt == null) {
+			this.firstVisitAt = now;
+		}
+	}
+
+	public void markBannerSeen(LocalDateTime now) {
+		if (this.bannerSeenAt == null) {
+			this.bannerSeenAt = now;
+		}
+	}
+
+	public void dismiss(LocalDateTime now) {
+		this.dismissed = true;
+		this.dismissedAt = now;
+	}
+}
+```
+
+```java
+public interface NoteReminderRepository extends JpaRepository<NoteReminder, Long> {
+
+	Optional<NoteReminder> findByUserIdAndReminderDate(Long userId, LocalDate reminderDate);
+
+	@Query("""
+		select r from NoteReminder r
+		where r.reminderDate = :date
+		order by r.userId
+	""")
+	Stream<NoteReminder> streamAllByDate(LocalDate date);
+}
+```
+
+### 14.2 후보 셀렉터
+
+```java
+@Component
+@RequiredArgsConstructor
+public class NoteReminderSelector {
+
+	private final NoteBookmarkRepository bookmarkRepository;
+	private final NoteAnswerRepository answerRepository;
+	private final Random random = new SecureRandom();
+
+	public Optional<ReminderCandidate> pickOne(Long userId) {
+		List<ReminderCandidate> candidates = new ArrayList<>();
+		candidates.addAll(bookmarkRepository.findReminderCandidates(userId));
+		candidates.addAll(answerRepository.findReminderCandidates(userId));
+
+		if (candidates.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(candidates.get(random.nextInt(candidates.size())));
+	}
+
+	public record ReminderCandidate(Long noteId, ReminderSourceType sourceType, NoteReminderPayload payload) { }
+}
+```
+
+### 14.3 스케줄러
+
+```java
+@Component
+@RequiredArgsConstructor
+public class NoteReminderScheduler {
+
+	private final ActiveUserProvider activeUserProvider;
+	private final NoteReminderSelector selector;
+	private final NoteReminderRepository reminderRepository;
+	private final NoteReminderCachePort cachePort;
+
+	@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+	@SchedulerLock(name = "noteReminderScheduler", lockAtLeastFor = "PT1M", lockAtMostFor = "PT5M")
+	@Transactional
+	public void publishDailyDigest() {
+		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		activeUserProvider.streamUserIds()
+			.forEach(userId -> selector.pickOne(userId).ifPresent(candidate -> upsert(userId, today, candidate)));
+	}
+
+	private void upsert(Long userId, LocalDate today, ReminderCandidate candidate) {
+		NoteReminder reminder = reminderRepository.findByUserIdAndReminderDate(userId, today)
+			.orElseGet(NoteReminder::new);
+		reminder.setUserId(userId);
+		reminder.setReminderDate(today);
+		reminder.setNoteId(candidate.noteId());
+		reminder.setSourceType(candidate.sourceType());
+		reminder.setPayloadSnapshot(candidate.payload().toJson());
+		reminderRepository.save(reminder);
+		cachePort.save(reminder); // Redis SETNX
+	}
+}
+```
+
+### 14.4 서비스 & 컨트롤러
+
+```java
+@Service
+@RequiredArgsConstructor
+public class NoteReminderService {
+
+	private final NoteReminderRepository reminderRepository;
+	private final NoteReminderCachePort cachePort;
+	private final Clock clock;
+
+	@Transactional(readOnly = true)
+	public Optional<NoteReminderResponse> getTodayReminder(Long userId) {
+		LocalDate today = LocalDate.now(clock);
+		NoteReminder reminder = cachePort.get(userId, today)
+			.orElseGet(() -> reminderRepository.findByUserIdAndReminderDate(userId, today)
+				.map(cachePort::save)
+				.orElse(null));
+		if (reminder == null) {
+			return Optional.empty();
+		}
+
+		LocalDateTime now = LocalDateTime.now(clock);
+		if (reminder.getFirstVisitAt() == null) {
+			reminder.markFirstVisit(now);
+			reminderRepository.save(reminder);
+			return Optional.of(NoteReminderResponse.deferred(reminder));
+		}
+		if (reminder.isDismissed()) {
+			return Optional.of(NoteReminderResponse.none());
+		}
+		if (reminder.getBannerSeenAt() == null) {
+			reminder.markBannerSeen(now);
+			reminderRepository.save(reminder);
+		}
+		return Optional.of(NoteReminderResponse.banner(reminder));
+	}
+
+	@Transactional
+	public void dismiss(Long userId, LocalDate today) {
+		NoteReminder reminder = reminderRepository.findByUserIdAndReminderDate(userId, today)
+			.orElseThrow(() -> new ReminderNotFoundException(userId, today));
+		reminder.dismiss(LocalDateTime.now(clock));
+		cachePort.delete(userId, today);
+	}
+}
+```
+
+```java
+@RestController
+@RequestMapping("/api/notes/reminder")
+@RequiredArgsConstructor
+public class NoteReminderController {
+
+	private final NoteReminderService reminderService;
+
+	@GetMapping("/today")
+	public ResponseEntity<?> getToday(@AuthenticationPrincipal CustomUserDetails user) {
+		return reminderService.getTodayReminder(user.getUser().getId())
+			.<ResponseEntity<?>>map(ResponseEntity::ok)
+			.orElseGet(() -> ResponseEntity.noContent().build());
+	}
+
+	@PostMapping("/dismiss")
+	public ResponseEntity<Void> dismiss(
+		@AuthenticationPrincipal CustomUserDetails user,
+		@RequestBody(required = false) NoteReminderDismissRequest request) {
+		reminderService.dismiss(user.getUser().getId(), LocalDate.now());
+		return ResponseEntity.noContent().build();
+	}
+}
+```
+
+```java
+public record NoteReminderDismissRequest(String reason) { }
+```
+
+### 14.5 Redis 포트 (옵션 A/C)
+
+```java
+@Component
+@RequiredArgsConstructor
+public class NoteReminderCachePort {
+
+	private final RedisTemplate<String, String> redisTemplate;
+	private final ObjectMapper objectMapper;
+
+	public Optional<NoteReminder> get(Long userId, LocalDate date) {
+		String key = buildKey(userId, date);
+		String value = redisTemplate.opsForValue().get(key);
+		return value == null ? Optional.empty() : Optional.of(deserialize(value));
+	}
+
+	public NoteReminder save(NoteReminder reminder) {
+		String key = buildKey(reminder.getUserId(), reminder.getReminderDate());
+		redisTemplate.opsForValue().set(key, serialize(reminder), Duration.ofHours(24));
+		return reminder;
+	}
+
+	public void delete(Long userId, LocalDate date) {
+		redisTemplate.delete(buildKey(userId, date));
+	}
+
+	private String buildKey(Long userId, LocalDate date) {
+		return "note:reminder:%d:%s".formatted(userId, date);
+	}
+}
+```
+
+위 코드 조각을 기반으로 서비스/테스트를 구현하면 문서에서 설명한 플로우를 그대로 재현할 수 있다.
