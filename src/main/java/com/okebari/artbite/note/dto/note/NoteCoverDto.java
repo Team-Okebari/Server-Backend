@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 public record NoteCoverDto(
 	@NotBlank String title,
 	@NotBlank String teaser,
-	@NotBlank String mainImageUrl
+	@NotBlank String mainImageUrl,
+	String creatorName,
+	String creatorJobTitle
 ) {
 }

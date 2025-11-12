@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.okebari.artbite.auth.vo.CustomUserDetails;
 import com.okebari.artbite.common.dto.CustomApiResponse;
+import com.okebari.artbite.note.dto.note.ArchivedNoteViewResponse;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
 import com.okebari.artbite.note.dto.note.NotePreviewResponse;
-import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.TodayPublishedResponse;
 import com.okebari.artbite.note.dto.summary.ArchivedNoteSummaryResponse;
 import com.okebari.artbite.note.service.NoteQueryService;
@@ -51,15 +51,15 @@ public class NoteQueryController {
 	}
 
 	/**
-	 * 유료 구독자를 대상으로 지난 노트 상세를 제공한다.
+	 * 지난 노트 상세/프리뷰를 구독 상태에 따라 제공한다.
 	 */
 	@PreAuthorize("hasAnyRole('USER','ADMIN')")
 	@GetMapping("/archived/{noteId}")
-	public CustomApiResponse<NoteResponse> getArchivedDetail(
+	public CustomApiResponse<ArchivedNoteViewResponse> getArchivedDetail(
 		@PathVariable Long noteId,
 		@AuthenticationPrincipal CustomUserDetails userDetails) {
 		return CustomApiResponse.success(
-			noteQueryService.getArchivedNoteDetail(noteId, userDetails.getUser().getId()));
+			noteQueryService.getArchivedNoteView(noteId, userDetails.getUser().getId()));
 	}
 
 	/**
