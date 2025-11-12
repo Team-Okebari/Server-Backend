@@ -59,8 +59,11 @@ public class NoteBookmarkService {
 	 * 서비스 DTO(`NoteBookmarkResponse`)를 반환하고, 컨트롤러에서 프론트 전용 DTO로 변환한다.
 	 */
 	@Transactional(readOnly = true)
-	public List<NoteBookmarkResponse> list(Long userId) {
-		return bookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+	public List<NoteBookmarkResponse> list(Long userId, String keyword) {
+		List<NoteBookmark> bookmarks = (keyword == null || keyword.isBlank())
+			? bookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId)
+			: bookmarkRepository.searchByUserIdAndKeyword(userId, keyword.trim());
+		return bookmarks.stream()
 			.map(bookmark -> noteMapper.toBookmarkResponse(bookmark))
 			.toList();
 	}

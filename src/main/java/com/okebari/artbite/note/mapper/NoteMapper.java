@@ -1,5 +1,7 @@
 package com.okebari.artbite.note.mapper;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
@@ -71,6 +73,7 @@ public class NoteMapper {
 		Creator creator = note.getCreator();
 		CreatorSummaryDto creatorSummary = creator != null ? creatorMapper.toSummary(creator) : null;
 		Long creatorId = creator != null ? creator.getId() : null;
+		String creatorJobTitle = creator != null ? creator.getJobTitle() : null;
 		NoteExternalLinkDto externalLink = note.getSourceUrl() != null
 			? new NoteExternalLinkDto(note.getSourceUrl())
 			: null;
@@ -79,7 +82,7 @@ public class NoteMapper {
 			note.getId(),
 			note.getStatus(),
 			note.getTagText(),
-			toCoverResponse(note),
+			buildCoverResponse(note, false),
 			toOverviewDto(note.getOverview()),
 			toRetrospectDto(note.getRetrospect()),
 			note.getProcesses() != null
@@ -90,9 +93,10 @@ public class NoteMapper {
 			toQuestionDto(note.getQuestion()),
 			toAnswerResponse(note.getQuestion() != null ? note.getQuestion().getAnswer() : null),
 			creatorId,
+			creatorJobTitle,
 			externalLink,
 			creatorSummary,
-			note.getPublishedAt(),
+			toDateOnly(note.getPublishedAt()),
 			note.getArchivedAt(),
 			note.getCreatedAt(),
 			note.getUpdatedAt()
@@ -101,31 +105,33 @@ public class NoteMapper {
 
 	// 무료 사용자 미리보기 용도로 커버/요약 텍스트만 추린다.
 	public NotePreviewResponse toPreview(Note note, int overviewLimit) {
-		Creator creator = note.getCreator();
-		CreatorSummaryDto creatorSummary = creator != null ? creatorMapper.toSummary(creator) : null;
-		NoteExternalLinkDto externalLink = note.getSourceUrl() != null
-			? new NoteExternalLinkDto(note.getSourceUrl())
-			: null;
-		String overviewPreview = buildOverviewPreview(note.getOverview(), overviewLimit);
+		NoteOverviewDto overview = toOverviewDto(note.getOverview());
+		if (overview != null && overview.bodyText() != null && overview.bodyText().length() > overviewLimit) {
+			overview = new NoteOverviewDto(
+				overview.sectionTitle(),
+				overview.bodyText().substring(0, overviewLimit),
+				overview.imageUrl()
+			);
+		}
 
 		return new NotePreviewResponse(
 			note.getId(),
-			toCoverResponse(note),
-			overviewPreview,
-			externalLink,
-			creatorSummary
+			buildCoverResponse(note, false),
+			overview
 		);
 	}
 
 	// 지난 노트 목록(ARCHIVED) 조회용 요약 DTO를 만든다.
 	public ArchivedNoteSummaryResponse toArchivedSummary(Note note) {
 		NoteCover cover = note.getCover();
+		Creator creator = note.getCreator();
 		return new ArchivedNoteSummaryResponse(
 			note.getId(),
 			note.getTagText(),
 			cover != null ? cover.getTitle() : null,
 			cover != null ? cover.getMainImageUrl() : null,
-			cover != null ? cover.getTeaser() : null
+			creator != null ? creator.getName() : null,
+			note.getPublishedAt() != null ? note.getPublishedAt().toLocalDate() : null
 		);
 	}
 
@@ -139,8 +145,8 @@ public class NoteMapper {
 			note.getId(),
 			cover != null ? cover.getTitle() : null,
 			cover != null ? cover.getMainImageUrl() : null,
+			note.getTagText(),
 			creator != null ? creator.getName() : null,
-			creator != null ? creator.getJobTitle() : null,
 			bookmark.getCreatedAt()
 		);
 	}
@@ -179,17 +185,7 @@ public class NoteMapper {
 	}
 
 	public NoteCoverResponse toCoverResponse(Note note) {
-		NoteCover cover = note.getCover();
-		String creatorName = note.getCreator() != null ? note.getCreator().getName() : null;
-		String creatorJobTitle = note.getCreator() != null ? note.getCreator().getJobTitle() : null;
-		return new NoteCoverResponse(
-			cover != null ? cover.getTitle() : null,
-			cover != null ? cover.getTeaser() : null,
-			cover != null ? cover.getMainImageUrl() : null,
-			creatorName,
-			creatorJobTitle,
-			note.getPublishedAt()
-		);
+		return buildCoverResponse(note, true);
 	}
 
 	// 개요(overview) DTO → 엔티티 변환.
@@ -270,20 +266,22 @@ public class NoteMapper {
 		return new NoteQuestionDto(question.getQuestionText());
 	}
 
-	private String buildOverviewPreview(NoteOverview overview, int limit) {
-		if (overview == null) {
-			return null;
-		}
-		String text = overview.getBodyText();
-		if (text == null) {
-			return null;
-		}
-		String normalized = text.strip();
-		if (normalized.length() <= limit) {
-			return normalized;
-		}
-		return normalized.substring(0, limit) + "...";
+	private NoteCoverResponse buildCoverResponse(Note note, boolean includeTeaser) {
+		NoteCover cover = note.getCover();
+		String creatorName = note.getCreator() != null ? note.getCreator().getName() : null;
+		String creatorJobTitle = note.getCreator() != null ? note.getCreator().getJobTitle() : null;
+		String teaser = cover != null && includeTeaser ? cover.getTeaser() : null;
+		return new NoteCoverResponse(
+			cover != null ? cover.getTitle() : null,
+			teaser,
+			cover != null ? cover.getMainImageUrl() : null,
+			creatorName,
+			creatorJobTitle,
+			toDateOnly(note.getPublishedAt())
+		);
 	}
 
-	// 작가 엔티티 → DTO 변환.
+	private LocalDate toDateOnly(LocalDateTime dateTime) {
+		return dateTime != null ? dateTime.toLocalDate() : null;
+	}
 }

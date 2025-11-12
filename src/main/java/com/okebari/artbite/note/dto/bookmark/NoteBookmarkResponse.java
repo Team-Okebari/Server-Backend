@@ -7,8 +7,8 @@ public record NoteBookmarkResponse(
 	Long noteId,
 	String title,
 	String mainImageUrl,
+	String tagText,
 	String creatorName,
-	String creatorJobTitle,
 	LocalDateTime bookmarkedAt
 ) {
 }

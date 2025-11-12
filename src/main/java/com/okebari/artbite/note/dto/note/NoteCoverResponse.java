@@ -1,6 +1,6 @@
 package com.okebari.artbite.note.dto.note;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * 노트 커버 영역을 프론트에 내려줄 때 사용하는 DTO.
@@ -12,6 +12,6 @@ public record NoteCoverResponse(
 	String mainImageUrl,
 	String creatorName,
 	String creatorJobTitle,
-	LocalDateTime publishedAt
+	LocalDate publishedDate
 ) {
 }
