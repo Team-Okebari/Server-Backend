@@ -33,8 +33,6 @@ services:
       OAUTH2_REDIRECT_URI_SUCCESS: ${OAUTH2_REDIRECT_URI_SUCCESS}
       OAUTH2_LOGOUT_REDIRECT_URI_KAKAO: ${OAUTH2_LOGOUT_REDIRECT_URI_KAKAO}
     depends_on:
-      artbite-postgres:
-        condition: service_healthy
       artbite-redis:
         condition: service_healthy
     volumes:

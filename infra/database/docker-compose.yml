@@ -1,23 +1,4 @@
 services:
-  artbite-postgres:
-    image: postgres:13-alpine
-    container_name: artbite-postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-artbite_db}
-      POSTGRES_USER: ${POSTGRES_USER:-artbite_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-artbite_password}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - artbite-net
-
   artbite-redis:
     image: redis:6-alpine
     container_name: artbite-redis
@@ -35,7 +16,6 @@ services:
       - artbite-net
 
 volumes:
-  pgdata:
   redisdata:
 
 networks:
