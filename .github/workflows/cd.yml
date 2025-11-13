@@ -73,11 +73,11 @@ jobs:
           # 서비스 중지 및 시작
           echo "Stopping all services..."
           chmod +x ./infra/scripts/stop.sh
-          sudo ./infra/scripts/stop.sh
+          sudo ./infra/scripts/stop.sh prod
 
           echo "Starting services with start.sh..."
           chmod +x ./infra/scripts/start.sh
-          sudo ./infra/scripts/start.sh
+          sudo ./infra/scripts/start.sh prod
 
           # 디버그 출력: 컨테이너 목록과 관련 로그
           echo "Listing all containers:"

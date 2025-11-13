@@ -1,3 +1,6 @@
+server:
+  forward-headers-strategy: native
+
 # Development Profile (for Docker Compose)
 spring:
   jpa:
@@ -24,11 +27,11 @@ payment:
     test_secret_api_key: ${TOSS_PAYMENTS_TEST_SECRET_API_KEY}
     success_url: "${TOSS_PAYMENTS_SUCCESS_URL}"
     fail_url: "${TOSS_PAYMENTS_FAIL_URL}"
-    membership_amount: 4900 # 월간 구독 금액
+    membership_amount: 3900 # 월간 구독 금액
     frontend_success_url: "/payment/success" # 프론트엔드 성공 경로
     frontend_fail_url: "/payment/fail" # 프론트엔드 실패 경로
     url: "https://api.tosspayments.com/v1/payments/"
-    order-name: "Sparki 월간 구독"
+    order-name: "스파키 멤버십"
     ready-timeout-minutes: 10 # 개발용으로 10분 설정
     ready-check-interval-ms: 300000 # 개발용으로 5분 설정 (스케줄러 실행 간격)
 
