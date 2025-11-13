@@ -1,0 +1,94 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.14.1}
+    container_name: artbite-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+      - "${ELASTICSEARCH_TRANSPORT_PORT:-9300}:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: |
+        CMD-SHELL curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green"\|status":"yellow"'
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - elk-net
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${LOGSTASH_VERSION:-8.14.1}
+    container_name: artbite-logstash
+    ports:
+      - "${LOGSTASH_BEATS_PORT:-5044}:5044"
+      - "${LOGSTASH_HTTP_PORT:-9600}:9600"
+    volumes:
+      - ../logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: |
+        CMD-SHELL curl -s http://localhost:9600/ | grep -q 'logstash'
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - elk-net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${KIBANA_VERSION:-8.14.1}
+    container_name: artbite-kibana
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      test: |
+        CMD-SHELL curl -s http://localhost:5601/api/status | grep -q '"state":"green"'
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - elk-net
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:${FILEBEAT_VERSION:-8.14.1}
+    container_name: artbite-filebeat
+    volumes:
+      - ../../logs:/usr/share/filebeat/logs:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    command: [ "filebeat", "-e", "-strict.perms=false", "-c", "/usr/share/filebeat/filebeat.yml" ]
+    depends_on:
+      - logstash
+    networks:
+      - elk-net
+    restart: unless-stopped
+
+volumes:
+  elasticsearch_data:
+
+networks:
+  elk-net:
+    external: true
