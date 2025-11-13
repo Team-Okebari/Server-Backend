@@ -1,3 +1,6 @@
+server:
+  forward-headers-strategy: native
+
 # Development Profile (for Docker Compose)
 spring:
   jpa:
