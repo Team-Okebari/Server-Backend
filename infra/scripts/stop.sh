@@ -55,9 +55,9 @@ echo "부가 인프라(ELK) compose 스택이 병렬로 중지되었습니다."
 echo ""
 echo "=== Stopping Main Application Stack (DB, Redis, App) ==="
 if [ -f "${ROOT_DIR}/.env" ]; then
-  ${DOCKER_COMPOSE_CMD} --project-name artbite --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${ROOT_DIR}/infra/database/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.yml" down --volumes
+  ${DOCKER_COMPOSE_CMD} --project-name artbite --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${ROOT_DIR}/infra/database/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.yml" down
 else
-  ${DOCKER_COMPOSE_CMD} --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/infra/database/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.yml" down --volumes
+  ${DOCKER_COMPOSE_CMD} --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/infra/database/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.yml" down
 fi
 
 # ── 7️⃣ 네트워크 삭제 ──
