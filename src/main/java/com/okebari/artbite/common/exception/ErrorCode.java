@@ -29,6 +29,8 @@ public enum ErrorCode {
 	NOTE_INVALID_STATUS(HttpStatus.BAD_REQUEST, "N002", "허용되지 않은 노트 상태입니다."),
 	NOTE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "N003", "노트에 접근할 권한이 없습니다."),
 
+	REMINDER_NOT_FOUND(HttpStatus.NOT_FOUND, "NR001", "리마인드 정보를 찾을 수 없습니다."),
+
 	// Creator Errors
 	CREATOR_NOT_FOUND(HttpStatus.NOT_FOUND, "CR001", "작가 정보를 찾을 수 없습니다."),
 	// Membership Errors

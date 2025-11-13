@@ -124,6 +124,7 @@ src/test/java/com/okebari/artbite/note
 - **랜덤 샘플링 전략(확정)**: `ORDER BY md5(concat(:userId, :date, note_id)) LIMIT 1`로 하루 한 건을 고정한다.
 - **랜덤 샘플링 옵션**: Java `SecureRandom/ThreadLocalRandom`으로 후보 리스트를 직접 샘플링하거나, `ORDER BY random()`으로 매 호출마다 노트를 바꾸는 방식을 정책 변경 시에만 사용한다.
 - **캐싱 전략**: Redis `SETNX` + TTL 24h, 캐시 miss 시 DB fallback 후 다시 저장.
+- > `SETNX`는 “SET if Not Exists” 명령이다. 자정 배치가 `note:reminder:{user}:{yyyyMMdd}` 키를 `SETNX`로 저장하면 첫 실행만 성공하고, 이후 중복 실행은 무시된다. 이렇게 해야 하루 동안 동일한 노트를 유지할 수 있으며, TTL 24h를 함께 설정해 다음날 자동으로 키가 삭제되도록 한다. dismiss나 상태 변경 시에는 우리가 직접 `DEL` 또는 `SETEX`로 덮어써 즉시 반영한다.
 - **Idempotent Upsert**: `INSERT ... ON CONFLICT (user_id, reminder_date) DO UPDATE`로 재실행에도 동일 결과 보장.
 - **상태 전이**: `firstVisitAt` 없으면 첫 호출로 기록, `bannerSeenAt` 없으면 두 번째 호출에서 배너 노출, `dismissed=true`면 204 반환. `modalClosedAt`은 모달에서 “취소”를 택한 흔적만 남기는 용도로 사용한다.
 - **이벤트 기반 무효화**: 현재 노트 비공개/자동 무효화 기능은 요구되지 않으며, ADMIN이 노트를 삭제할 경우 DB FK(`ON DELETE CASCADE`)로 북마크·답변·지난 노트 목록이 자동 정리되므로 추가 리스너는 사용하지 않는다.
@@ -292,6 +293,146 @@ src/test/java/com/okebari/artbite/note
 - 통합 테스트에서는 실제 DB/Redis를 붙여 두 가지 시나리오를 확인한다.
   1. `note_reminder_pot`에 이미 row가 있을 때 upsert가 idempotent하게 동작하는지.
   2. `alarmService` 대체 구현(예: InMemory sink)을 두어 실패 시 메시지가 기록되는지.
+
+### 6.1.2 캐시 상태 전이 흐름(상세)
+
+#### 텍스트 설명
+1. **캐시 우선 조회**  
+   - 모든 요청은 `note:reminder:{userId}:{yyyyMMdd}` 키를 먼저 확인한다.  
+   - 캐시에 값이 없으면 DB(`note_reminder_pot`)에서 해당 날짜 행을 읽어 캐시에 다시 적재한 뒤 로직을 계속 진행한다.
+2. **상태 전이 판단**  
+   - 캐시의 `dismissed`가 `true`면 즉시 `surfaceHint=NONE`을 응답하고 종료한다. (더 이상 전이 없음)  
+   - `dismissed=false`인데 `firstVisitAt`이나 `bannerSeenAt`이 비어 있으면 **상태 전이가 필요**하므로 DB 레코드를 불러와 필드를 업데이트한 뒤 저장·캐시에 재적재한다.
+3. **상태별 행동**  
+   - `firstVisitAt == null` ⇒ 첫 접속: `firstVisitAt` 기록, 응답은 `DEFERRED`.  
+   - `firstVisitAt != null && bannerSeenAt == null` ⇒ 두 번째 접속: `bannerSeenAt` 기록, 응답은 `BANNER`.  
+   - `bannerSeenAt != null && dismissed == false` ⇒ 이미 본 상태: 계속 `BANNER`.  
+   - `dismissed == true` ⇒ 노출 금지(`NONE`).  
+
+#### 상태 전이 도식
+```mermaid
+flowchart TD
+    Start[요청 수신] --> Cache{Redis hit?}
+    Cache -->|No| LoadDB[DB note_reminder_pot 조회<br/>+ 캐시 재적재]
+    Cache -->|Yes| EvalState[CacheValue 판별]
+    LoadDB --> EvalState
+    EvalState -->|dismissed=true| None[응답 surfaceHint=NONE]
+    EvalState -->|firstVisitAt=null| FirstVisit[DB로 전이 수행<br/>firstVisitAt=now]
+    EvalState -->|bannerSeenAt=null<br/>그리고 firstVisitAt!=null| SecondVisit[DB로 전이 수행<br/>bannerSeenAt=now]
+    EvalState -->|기타| BannerOnly[변경 없음<br/>surfaceHint=BANNER]
+    FirstVisit --> UpdateCache1[DB save + 캐시 덮어쓰기] --> DeferResp[응답 surfaceHint=DEFERRED]
+    SecondVisit --> UpdateCache2[DB save + 캐시 덮어쓰기] --> BannerResp[응답 surfaceHint=BANNER]
+    BannerOnly --> BannerResp
+    None --> End
+    DeferResp --> End
+    BannerResp --> End
+```
+
+> **요약**: “캐시 우선 → 상태 판별 → 필요한 경우에만 DB 업데이트 후 캐시 갱신”의 반복이다. dismiss 이후에도 캐시에 저장된 값으로 즉시 `NONE`을 내려 하루 동안 노출이 차단된다.
+
+#### Payload 스냅샷 구성
+배너는 고정 멘트 + 노트 제목/썸네일만 사용하므로 스냅샷(`payload_*`)에는 다음 두 항목만 저장한다.
+
+| 필드 | 설명 | 활용 위치 |
+|------|------|-----------|
+| `payload_title` | 노트 제목 | 배너 텍스트 영역 |
+| `payload_main_image_url` | 노트 썸네일 이미지 | 배너 이미지 영역 |
+
+배너에서 필요한 정보만 저장함으로써 노트 메타 데이터가 중간에 변경되어도 “당일 고정 컨텐츠” 요구를 만족하고, 캐시 공간도 최소화할 수 있다.
+
+### 6.2 서비스 지원 컴포넌트 개요
+`note/service/support` 패키지는 리마인드 기능을 작은 책임 단위로 쪼갠 도우미 클래스를 담고 있다. 각각 어디에 쓰이고 어떤 결과를 만들어 내는지 정리하면 다음과 같다.
+
+| 컴포넌트 | 역할/존재 위치 | 기획/운영 관점에서의 기대 효과 |
+|----------|----------------|------------------------------|
+| `ReminderTargetUserReader`<br>`@Component` (`…support.ReminderTargetUserReader`) | 회원가입 사용자 전체 ID를 스트리밍으로 제공한다. | 리마인드는 “모든 사용자에게 하루 한 번” 제공하므로 대상 필터링 없이 순회한다. 이후 단계에서 사용자별 노트를 고른다. |
+| `NoteReminderSelector`<br>`@Component` (`…support.NoteReminderSelector`) | 사용자 ID와 날짜를 입력받아, 그 사용자의 북마크·답변 후보 중 1개를 “하루 동안 고정될” 노트로 결정한다. | PM/PD 입장에서 “왜 오늘 이 노트를 받았는가?”가 명확하다. source_type(`BOOKMARK` / `ANSWER`)도 남기므로 실험이나 통계에서 출처별 성과를 비교할 수 있다.
+| `ReminderCacheClient` + `RedisReminderCacheClient` (`…support.ReminderCacheClient`) | Redis에 저장된 “오늘 노출할 노트”를 읽고/쓰기/삭제하는 인터페이스 & 기본 구현. `SETNX + TTL + 파이프라이닝`을 캡슐화해 둔다. | 프론트가 빠르게 응답을 받도록 메모리에 미리 적재하고 dismiss 등 이벤트도 즉시 반영된다. 향후 다른 캐시 구현(예: MemoryDB)으로 교체해도 서비스/스케줄러 코드는 변경 없이 동일 인터페이스를 사용할 수 있다. |
+| `NoteReminderCacheValue` + `ReminderStateSnapshot` | Redis에 저장되는 JSON 구조 + 상태 전용 스냅샷. 노출 페이로드와 상태 정보를 분리해 유지한다. | (Q3) 상태 전이를 바꿀 때도 스냅샷 구조만 조정하면 되므로 DTO 변경 폭이 줄고, 캐시를 지우지 않아도 “오늘은 그만 보기” 상태가 유지된다.
+| `ReminderAlertNotifier` / `LoggingReminderAlertNotifier` (`…support.ReminderAlertNotifier`) | 랜덤 셀렉터가 반복 실패하면 운영팀에게 알림을 보내는 포트. 기본 구현은 로그이지만 Slack/메일로 교체 가능. | 23시 배치가 일부 사용자에서 계속 실패해도 조용히 넘어가지 않고, 즉시 알람이 떠서 대응할 수 있다. 정책상 중요한 기능이므로 “감지 가능성”을 확보하는 역할을 한다.
+
+#### 커스텀 캐시 포트 유지 이유와 향후 확장
+- **현재 그대로 두는 이유**: 하루 한 번 자정에 대량 SET, 요청마다 상태 즉시 반영, `SETNX + TTL 24h`, 파이프라이닝, dismiss 즉시 반영 등 세밀 제어가 필요하기 때문. Spring Cache 추상화만으로는 이러한 요구를 충족하기 어렵다.
+- **장점**: 키 네이밍과 TTL로 “하루 한 건” 규칙을 보장하고, 사용자 행동을 Redis에서도 곧바로 반영한다. 배포·상태 전이·숨김 정책이 기술적으로 정확히 지켜진다.
+- **인터페이스로 추상화한 이유**: `ReminderCacheClient` 덕분에 다른 캐시 구현으로 갈아타거나 정책이 단순해졌을 때 영향 범위를 최소화할 수 있다. 서비스/스케줄러는 인터페이스만 의존한다.
+- **정책 변경 예시**
+  | 시나리오 | 수정 포인트 | 기대 영향 |
+  |----------|-------------|-----------|
+  | 첫 방문에도 배너를 즉시 노출 | `NoteReminderService` 상태 전이 분기에서 `DEFERRED` 단계 제거, 캐시 로직은 건드릴 필요 없음 | 코드 변경 범위가 서비스 레이어에 국한 |
+  | 캐시를 다른 인프라로 교체 (예: MemoryDB) | `ReminderCacheClient` 새 구현체를 작성해 빈으로 교체 | API/배치 로직 변화 없음 |
+  | dismiss 기능 제거 | `dismissToday` 메서드를 비활성화하고 `dismissed` 필드를 사용하지 않도록 조정 | 사용자 경험만 단순화, 캐시 구조는 동일 |
+
+```mermaid
+flowchart LR
+    Service["NoteReminderService\n(상태 전이)"] --> CacheIface["ReminderCacheClient\n인터페이스"]
+    Scheduler --> CacheIface
+    CacheIface -->|현재| RedisImpl["RedisReminderCacheClient\n(SETNX/TTL/파이프라인)"]
+    RedisImpl --> Redis[(Redis)]
+    CacheIface -->|향후| OtherImpl["다른 캐시 구현\n(Spring Cache 등)"]
+```
+
+#### 컴포넌트 상호 작용 도식
+```mermaid
+flowchart TD
+    Reader["ReminderTargetUserReader\n(전체 사용자 ID 스트림)"] --> Scheduler["NoteReminderScheduler\n23시/00시 배치"]
+    Scheduler --> Selector["NoteReminderSelector\nuserId+date → ReminderCandidate"]
+    Selector --> Scheduler
+    Scheduler --> Repo["NoteReminderRepository"]
+    Scheduler --> CachePort["ReminderCacheClient\n(SETNX/TTL/파이프라인)"]
+    Scheduler --> Alert["ReminderAlertNotifier\n(실패 알람)"]
+    Service["NoteReminderService\nAPI 레이어"] --> CachePort
+    Service --> Repo
+    CachePort --> Redis[(Redis)]
+    Repo --> DB[(note_reminder_pot)]
+```
+
+- 23시 배치: Reader → Scheduler → Selector → Repository(upsert) → CachePort(evict) 순서로 실행된다.
+- 00시 배치: Scheduler가 Repository에서 스트리밍으로 데이터를 읽어 CachePort를 통해 Redis를 워밍한다.
+- 사용자 요청 시: `NoteReminderService`가 CachePort/Repository를 통해 상태를 읽고 전이한다.
+- 재시도 실패: Scheduler가 `ReminderAlertNotifier`를 호출해 운영자 알람을 남긴다.
+
+이처럼 support 패키지 구성요소는 “후보 사용자 집계 → 랜덤 셀렉션 → DB/Redis I/O → 장애 알림”까지 리마인드 파이프라인을 단계별로 구성해 주며, 각 레이어에서 기대하는 구현 결과를 명확히 분리해 준다.
+
+### 6.3 NoteReminderService 상세 흐름
+사용자 요청이 들어올 때 `NoteReminderService`가 어떤 단계를 거쳐 응답을 만드는지, PM/PD 시각에서 이해할 수 있도록 단계별로 풀어 쓰면 다음과 같다.
+
+#### 단계별 설명
+1. **캐시 조회 (Redis)**: `note:reminder:{user}:{날짜}` 키를 먼저 확인한다. 값이 있으면 그대로 상태를 판별할 수 있어 가장 빠른 응답 경로다.
+2. **DB 폴백**: 캐시에 값이 없으면 `note_reminder_pot`에서 해당 사용자/날짜 데이터를 읽고, 같은 내용을 Redis에 다시 저장한다. 이렇게 하면 이후 요청은 메모리에서 바로 응답할 수 있다.
+3. **상태 전이 판단**: `dismissed`, `firstVisitAt`, `bannerSeenAt` 필드를 보고 오늘 어떤 화면을 보여줄지 결정한다. 필요하면 DB 레코드를 업데이트해 `firstVisitAt=지금`, `bannerSeenAt=지금` 등을 기록하고 Redis에도 동일하게 덮어쓴다.
+4. **응답 생성**: 최종적으로 `SurfaceHint`를 결정한다. 첫 방문이면 `DEFERRED`(배너 숨김), 두 번째 방문이면 `BANNER`, 이미 숨김 처리되었으면 `NONE`으로 내려 프론트가 바로 UI를 맞출 수 있다.
+
+#### NoteReminderService 처리 흐름 도식
+```mermaid
+flowchart TD
+    Start[API 요청] --> CacheLookup{Redis hit?}
+    CacheLookup -->|Yes| EvalCache[캐시 값으로 상태 판단]
+    CacheLookup -->|No| LoadDB[DB에서 오늘 데이터 조회]
+    LoadDB --> SaveCache[Redis에 다시 저장]
+    SaveCache --> EvalCache
+    EvalCache -->|dismissed=true| RespNone[응답 surfaceHint=NONE]
+    EvalCache -->|firstVisitAt 비어있음| FirstVisit[DB 업데이트
+firstVisitAt=now]
+    EvalCache -->|bannerSeenAt 비어있음| SecondVisit[DB 업데이트
+bannerSeenAt=now]
+    EvalCache -->|둘 다 채워짐| BannerResp[응답 surfaceHint=BANNER]
+    FirstVisit --> UpdateCache1[DB save + Redis 덮어쓰기] --> DeferResp[응답 surfaceHint=DEFERRED]
+    SecondVisit --> UpdateCache2[DB save + Redis 덮어쓰기] --> BannerResp
+    RespNone --> End
+    DeferResp --> End
+    BannerResp --> End
+```
+
+#### 코드 청크별 역할 요약
+| 청크 | 설명 | 최종 결과/영향 |
+|------|------|----------------|
+| `getTodayReminder` | 위 도식 전체를 실행하는 메인 엔트리. 캐시→DB→상태 전이라는 흐름을 캡슐화한다. | `Optional<NoteReminderResponse>`로 오늘 보여줄 배너 상태를 반환. 없으면 `Optional.empty()` → 프론트가 “오늘 리마인드 없음” 처리. |
+| `dismissToday` | “오늘은 그만 보기”를 누르면 호출. DB와 Redis를 `dismissed=true`로 즉시 갱신한다. | 이후 요청은 무조건 `surfaceHint=NONE`으로 응답되어 당일 배너가 다시 뜨지 않는다. |
+| `markModalClosed` | X 버튼 모달에서 “취소”를 눌렀다는 이벤트를 기록. UX 분석용 로그에 가깝다. | `modalClosedAt`을 저장해 사용자가 배너를 어떻게 다뤘는지 추적 가능. 노출 여부에는 영향 없음. |
+| `handleStateTransition(NoteReminder)` | 캐시 miss → DB에서 방금 읽은 엔티티를 대상으로 전이를 수행. 첫 방문/두 번째 방문 시각을 기록하거나 dismiss 여부를 확인한다. | DB 저장 + Redis 갱신 후 알맞은 `SurfaceHint` 응답. |
+| `handleStateTransition(NoteReminderCacheValue, …)` | 캐시 hit 시 사용. 캐시 값만으로 충분한지 판단하고, 필요하면 DB에서 엔티티를 다시 읽어 전이를 수행한다. | 캐시만 보고 `NONE/BANNER` 결정을 내릴 수 있고, DB에 다시 저장한 경우에도 캐시가 최신 상태로 덮어써져 일관성이 유지된다. |
+
+위와 같은 구조 덕분에 “첫 접속은 배너 숨김, 두 번째부터 노출, ‘오늘은 그만 보기’는 하루 동안 유지”라는 UX 요구가 코드로 정확히 구현된다. 또한 Redis 캐시 덕분에 API 응답이 빠르고, dismiss 같은 사용자 행동도 즉시 반영된다.
 
 ### 6.2 대량 사용자(예: 10만 명) 처리 전략
 | 전략 | 설명 | 장점 | 주의 사항 |
@@ -702,7 +843,7 @@ public class NoteReminderScheduler {
 	private final ActiveUserProvider activeUserProvider;
 	private final NoteReminderSelector selector;
 	private final NoteReminderRepository reminderRepository;
-	private final NoteReminderCachePort cachePort;
+	private final ReminderCacheClient cacheClient;
 
 	@Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
 	@SchedulerLock(name = "noteReminderScheduler", lockAtLeastFor = "PT1M", lockAtMostFor = "PT5M")
@@ -722,7 +863,7 @@ public class NoteReminderScheduler {
 		reminder.setSourceType(candidate.sourceType());
 		reminder.setPayloadSnapshot(candidate.payload().toJson());
 		reminderRepository.save(reminder);
-		cachePort.save(reminder); // Redis SETNX
+			cacheClient.save(reminder); // Redis SETNX
 	}
 }
 ```
@@ -735,7 +876,7 @@ public class NoteReminderScheduler {
 public class NoteReminderService {
 
 	private final NoteReminderRepository reminderRepository;
-	private final NoteReminderCachePort cachePort;
+	private final ReminderCacheClient cacheClient;
 	private final Clock clock;
 
 	@Transactional(readOnly = true)
@@ -804,29 +945,35 @@ public class NoteReminderController {
 public record NoteReminderDismissRequest(String reason) { }
 ```
 
-### 14.5 Redis 포트 (옵션 A/C)
+### 14.5 Redis 캐시 클라이언트 (옵션 A/C 최신 버전)
 
 ```java
 @Component
 @RequiredArgsConstructor
-public class NoteReminderCachePort {
+public class RedisReminderCacheClient implements ReminderCacheClient {
 
 	private final RedisTemplate<String, String> redisTemplate;
 	private final ObjectMapper objectMapper;
 
-	public Optional<NoteReminder> get(Long userId, LocalDate date) {
+	@Override
+	public Optional<NoteReminderCacheValue> get(Long userId, LocalDate date) {
 		String key = buildKey(userId, date);
 		String value = redisTemplate.opsForValue().get(key);
-		return value == null ? Optional.empty() : Optional.of(deserialize(value));
+		if (value == null) {
+			return Optional.empty();
+		}
+		return Optional.of(objectMapper.readValue(value, NoteReminderCacheValue.class));
 	}
 
-	public NoteReminder save(NoteReminder reminder) {
+	@Override
+	public void save(NoteReminder reminder) {
 		String key = buildKey(reminder.getUserId(), reminder.getReminderDate());
-		redisTemplate.opsForValue().set(key, serialize(reminder), Duration.ofHours(24));
-		return reminder;
+		String payload = objectMapper.writeValueAsString(NoteReminderCacheValue.from(reminder));
+		redisTemplate.opsForValue().set(key, payload, Duration.ofHours(24));
 	}
 
-	public void delete(Long userId, LocalDate date) {
+	@Override
+	public void evict(Long userId, LocalDate date) {
 		redisTemplate.delete(buildKey(userId, date));
 	}
 
@@ -837,3 +984,229 @@ public class NoteReminderCachePort {
 ```
 
 위 코드 조각을 기반으로 서비스/테스트를 구현하면 문서에서 설명한 플로우를 그대로 재현할 수 있다.
+
+---
+
+## 15. 성능·유지보수 Q&A 기록 (2025-02-13)
+
+최근 PM/PD/BE 합동 리뷰에서 논의된 질문과 조치 사항을 시간순으로 정리했다. 동일 이슈를 재검토할 때 이 섹션만 봐도 배경과 결론을 복기할 수 있다.
+
+### 15.1 랜덤 셀렉터 & 24시간 고정 전략 (Q1~Q2)
+- **문제 제기**: “MD5 기반 해시 추첨 대신 단순 난수 또는 `ORDER BY RANDOM()`을 쓰면 정책을 지킬 수 있는가? 랜덤 1건을 어떻게 24시간 고정할까?”
+- **결론**
+  1. **고정 조건**은 “사용자 ID + 날짜” 조합으로 결정된다. 해시(seed)를 무엇으로 쓰든, `note_reminder_pot`에 저장하고 자정 TTL로 캐시하면 하루 동안 값이 변하지 않는다.
+  2. **비용 비교**: `ORDER BY RANDOM() LIMIT 1`은 후보 테이블 전체를 스캔하므로 북마크 10만 건 이상에서 부하가 커진다. 대신 _사전에 ID 리스트를 가져와 애플리케이션에서 seed=`userId+날짜` 로 난수를 생성_ 하면 DB는 `WHERE id IN (…)`만 수행한다.
+  3. **MD5 → 난수 전환 시 고려**: seed만 바꾸면 되므로 정책(“하루 1건”)은 깨지지 않는다. 다만 추후 비용이 다시 올라가면 weighted-랜덤 등으로 확장할 수 있도록 `NoteReminderSelector`를 그대로 유지한다.
+
+#### 15.1.1 사전 조회 + 애플리케이션 난수 선택 절차
+| 단계 | 구현 포인트 | 기대 효과 |
+|------|-------------|-----------|
+| 1. 후보 사전 조회 | 23시 배치에서 `bookmark`, `answer` 테이블을 각각 한 번씩 조회해 `candidateIds` 리스트를 만든다. 필요한 필드는 `note_id`, `source_type`, `payload` 정도로 최소화한다. | DB는 정렬/랜덤 없이 단순 Range/Index 스캔만 수행하므로 I/O 부담이 적다. |
+| 2. 시드 계산 | `seed = Objects.hash(userId, targetDate)` 또는 `LocalDate.toEpochDay()` 기반 시드를 사용한다. | 동일 사용자·날짜 조합에서 항상 같은 인덱스가 나오므로 “24시간 고정” 요구를 충족한다. |
+| 3. 애플리케이션 난수 선택 | `Random(seed).nextInt(candidateIds.size())`로 인덱스를 뽑아 해당 노트를 선택한다. | 메모리 연산만으로 결정되므로 DB 부하가 0이다. |
+| 4. 결과 저장 및 캐싱 | `note_reminder_pot` upsert → Redis TTL 24h 저장(SETNX). | 자정 이후에도 모든 API가 동일 콘텐츠를 반환한다. |
+
+> 왜 이런 제안인가?  
+> - “랜덤 1건” 자체는 쉽게 구현되지만, **동일 결과를 24시간 유지**하려면 랜덤 과정이 결정론적이어야 한다.  
+> - DB `ORDER BY RANDOM()`는 호출 때마다 다른 결과를 만들고 매번 전체 정렬을 요구하므로 비용/일관성 모두 불리하다.  
+> - 사전 조회 + 애플리케이션 난수는 _“결정론”_ 과 _“저비용”_ 을 동시에 만족하는 가장 단순한 방법이다.
+
+#### 15.1.2 최종 권장 구현
+1. `NoteReminderSelector.pickOne(userId, targetDate)`가 북마크/답변 후보를 한번에 읽어 `List<ReminderCandidate>`를 구성한다.  
+2. `Random(seed(userId, targetDate))`로 인덱스를 뽑아 동일 사용자·날짜에 항상 같은 노트를 선택한다.  
+3. 선택 결과를 `note_reminder_pot`에 저장하고, `ReminderCacheClient.save`로 Redis에 TTL 24h 캐시한다.  
+
+이 방식이 **가장 효율적**인 이유:
+- DB는 “후보 조회”만 담당하고, 랜덤·정렬 연산을 애플리케이션 메모리에서 수행하므로 비용이 최소화된다.
+- 코드 복잡도는 `Random(seed)` 호출 한 줄 수준이며, 정책이 바뀌어도 Selector 안에서만 조정하면 된다.
+- 자정 배치와 API 캐시 워크플로가 그대로 유지되어 과부하 위험이 없다.
+
+#### 15.1.3 구현 메모 (2025-02-13)
+- `NoteReminderSelector`는 이제 후보를 `List<Long>`으로 합친 뒤 `Random(generateSeed(userId, date))`를 사용해 인덱스를 결정한다 (`src/main/java/com/okebari/artbite/note/service/support/NoteReminderSelector.java:60-92`). seed는 사용자·날짜 문자열을 MD5로 해시해 Long 값으로 만들기 때문에, 하루 동안 언제 호출해도 같은 노트가 선택된다.
+- 팀 코딩 스타일에 맞춰 스트림 대신 전통적인 for-loop로 후보 리스트를 순회한다. 후보 수가 많지 않아 성능 차이는 없으며, 디버깅과 가독성이 더 낫다.
+
+### 15.2 상태 전담 객체 도입 (Q3)
+- **문제 제기**: `NoteReminderCacheValue`와 `NoteReminderResponse`가 상태 타임스탬프를 모두 들고 있어 변경 시 수정 범위가 넓다.
+- **조치**: `ReminderStateSnapshot` + `ReminderStateMachine`을 추가해 상태 계산을 한 곳에서 수행하도록 변경했다.
+- **Before**
+  ```java
+  // (기존) 서비스가 직접 타임스탬프를 보고 분기
+  if (reminder.getFirstVisitAt() == null) {
+      reminder.markFirstVisit(now());
+      reminderRepository.save(reminder);
+      cacheClient.save(reminder);
+      return mapper.toResponse(reminder, SurfaceHint.DEFERRED);
+  }
+  if (reminder.getBannerSeenAt() == null) {
+      ...
+  }
+  ```
+- **After**
+  ```java
+  ReminderStateMachine.TransitionDecision decision =
+      reminderStateMachine.decide(ReminderStateSnapshot.from(reminder));
+  return executeStateAction(reminder, decision); // 내부에서 mark/persist/cache를 공통 처리
+  ```
+- **효과**
+  - 상태 로직이 `ReminderStateMachine`에 캡슐화되어 PM/PD가 정책을 바꿀 때 “상태 다이어그램”만 수정하면 됨.
+  - DTO는 배너에 필요한 페이로드만 노출(`title`, `image`, `surfaceHint` 등). 타임스탬프가 외부로 새지 않는다.
+  - 엔지니어링 팀은 상태 전이를 공통 헬퍼에서 테스트할 수 있어 회귀 위험을 줄인다.
+- **도식화**
+  ```mermaid
+  stateDiagram-v2
+      [*] --> FIRST_VISIT_PENDING
+      FIRST_VISIT_PENDING --> BANNER_PENDING: firstVisitAt 기록
+      BANNER_PENDING --> BANNER_ACTIVE: bannerSeenAt 기록
+      BANNER_ACTIVE --> DISMISSED: dismissed=true
+      DISMISSED --> [*]
+  ```
+
+### 15.3 상태 핸들러 세분화 vs 복잡도 (Q4)
+- **논의**: dismissed/firstVisit/bannerSeen을 각각의 “핸들러”로 나누면 과도하게 쪼개질 수 있다는 우려.
+- **결론**: `ReminderStateMachine`은 세 가지 전이만 다루는 enum(`StateAction`)을 사용해 **세밀하지만 과하지 않은 분리**를 유지했다. 메서드 수가 늘지 않았고, action이 3개라 복잡도는 기존 if-chain과 동일하지만 위치가 한 곳으로 모였다.
+
+### 15.4 DB 저장 + 캐시 덮어쓰기 공통화 (Q5)
+- **과거**: dismiss/firstVisit/bannerSeen 각각이 `repository.save → cache.save`를 반복 호출.
+- **개선**: `persistAndCache` + `tryCacheSave` 헬퍼를 두어 한쪽만 갱신되는 실수를 방지. 캐시 저장 실패 시에도 DB 커밋은 유지하며 로그만 남겨 디버깅이 쉬움.
+
+### 15.5 캐시 추상화 용어 정리 (Q6)
+- **실행**: 모든 문서/주석을 `NoteReminderCachePort` → `ReminderCacheClient`로 교체. 인터페이스 명이 “클라이언트”임을 강조해 Redis 의존성을 낮춘다.
+
+### 15.6 Redis 장애/직렬화 실패 대응 (Q7)
+- **정책**: 캐시 조회/저장 실패 시에는 로그를 남기고 DB만으로 응답한다. 사용자 경험은 유지되고, `log.warn` + 알람(HQ)으로 장애를 추적한다. (코드상 `fetchCacheSafely`, `tryCacheSave` 도입)
+
+### 15.7 노트 삭제/작가 탈퇴 정책 (Q8)
+- **결론**: 노트 작성·삭제 주체가 관리자이므로 “사용자에게 삭제 노트를 안내”하는 요구 없음. FK cascade로 사용자 목록에서 자동 제거되며 추가 UX 처리 불필요.
+
+### 15.8 요약 표
+| 질문 | 조치 | 문서/코드 위치 |
+|------|------|----------------|
+| Q1~Q2 | 난수 seed 전략 + 비용 비교 설명 추가 | §2, §15.1 |
+| Q3 | `ReminderStateSnapshot`/`ReminderStateMachine`, before/after 기록 | 코드 (`…service`, `…support`), §15.2 |
+| Q4 | 상태 enum 정리, 과도 분리 방지 설명 | §15.3 |
+| Q5 | `persistAndCache`/`tryCacheSave` 헬퍼 | `NoteReminderService`, §15.4 |
+| Q6 | 문서 용어 교체, 추상화 목적 서술 | §6.2, §14.5, §15.5 |
+| Q7 | 캐시 장애 fallback + 로그 정책 | `NoteReminderService`, §15.6 |
+| Q8 | 관리자만 삭제 가능, 추가 UX 없음 명시 | §15.7 |
+
+> **재검토 Tip**: 새로운 질문이 생기면 동일 번호 체계를 이어서 §15에 추가하면 된다.
+
+## 16. 추가 Q&A: 커스텀 Redis 포트 유지 사유 (2025-02-13)
+
+- **Q**: “RedisTemplate.opsForValue()만 써도 되는데 왜 커스텀 포트를 유지하나? 사용자가 늘어나면 파이프라이닝 없이도 과부하가 없나? 자체 구현이 항상 비효율적인가?”  
+- **A (요약)**  
+  - 리마인드는 “자정 한 번 세팅 + 하루 내내 요청 즉시 응답” 패턴이라 `SETNX + TTL 24h`, 파이프라이닝, dismiss 즉시 반영 같은 세부 제어가 필수다.  
+  - Spring Cache/opsForValue()는 단순 캐시에는 편하지만 이런 제어를 제공하지 않으므로 별도 포트가 필요하다.  
+  - 사용자 수가 늘어날수록 자정 워밍(수만 건 SET)의 네트워크 RTT가 병목이 되는데, 파이프라이닝으로 묶어두면 opsForValue() 개별 호출보다 안정적이다.  
+  - “자체 구현 = 복잡/비효율”은 아니고, 요구에 맞춰 세밀 제어를 직접 다루다 보니 생기는 구조다. 다만 중복이 생기지 않도록 공통 헬퍼(`ReminderCacheClient`, `persistAndCache`)로 관리 중이며, 정책이 단순해지면 Spring Cache로 옮길 여지도 남겨 두었다.
+- **향후 수정 예시**  
+  1. 정책이 “첫 방문에도 즉시 노출”로 바뀌면 `ReminderStateMachine`에서 `MARK_FIRST_VISIT` 분기를 제거하고, 캐시 구조는 그대로 두면 된다.  
+  2. 캐시 백엔드를 MemoryDB로 교체할 경우 `ReminderCacheClient` 새 구현체만 등록하면 서비스/스케줄러는 수정이 없다.  
+  3. dismiss 기능이 사라지면 `NoteReminderService.dismissToday`와 상태 스냅샷 필드만 줄이면 되고, 캐시 키/TTL 로직은 동일하게 유지된다.
+- **도식 (현재 구조 vs. 정책 변경 시 영향)**
+
+```mermaid
+flowchart LR
+    subgraph Current
+        Service["NoteReminderService\n(상태 전이)"] --> CacheIface["ReminderCacheClient"]
+        CacheIface --> RedisImpl["RedisReminderCacheClient\nSETNX/TTL/파이프라인"]
+    end
+    RedisImpl --> Redis[(Redis)]
+
+    subgraph FutureChange["정책 변경 시"]
+        Service2["NoteReminderService\n(새 상태 정책)"]
+        CacheIface2["ReminderCacheClient\n(동일 인터페이스)"]
+        ImplX["새 캐시 구현\nex) MemoryDB"]
+    end
+
+    Service -->|정책 변경| Service2
+    CacheIface -->|캐시 교체| CacheIface2
+    CacheIface2 --> ImplX --> Redis
+```
+
+이처럼 커스텀 포트는 세밀 제어 필요 때문에 유지하되, 인터페이스/헬퍼로 영향 범위를 최소화하면서 장기적으로도 안정성을 확보하는 방향이 가장 현실적이다.
+
+## 17. 오버스펙/불필요 요소 검토 요약 (2025-02-13)
+
+최근 “혹시 과한 설계가 아닌가?”라는 관점에서 확인했던 항목들을 한 번에 정리했다. PM/PD도 빠르게 맥락을 파악할 수 있도록 결정 이유와 향후 조정 시나리오를 함께 명시한다.
+
+| 검토 항목 | 현재 판단 | 향후 조정 예시 |
+|-----------|-----------|----------------|
+| **NoteReminderSelector의 MD5 정렬** | 사용자·날짜마다 동일 노트를 24시간 유지하기 위해 결정론적 해시가 필요했고, MD5 + 청크 병렬 처리로 비용을 제어하기로 확정. 단순 난수(seed=날짜)도 가능하지만, seed만 바꿀 뿐 결정론 전제는 동일하다 (§15.1). | 후보가 폭증해도 해시 방식은 유지하되, “사전 후보 조회 + 애플리케이션 난수” 절차(§15.1.1)로 교체하거나, 시드 함수를 운영 설정으로 뽑아 비용을 조절. |
+| **ReminderTargetUserReader의 사용자 목록 구성** | 정책이 “가입한 모든 사용자에게 리마인드 제공”이므로 별도 필터 없이 `UserRepository`에서 전체 ID를 스트리밍하면 된다. 북마크/답변 후보 조회는 셀렉터가 사용자별로 직접 실행한다. | 향후 “특정 조건 사용자만 대상” 요구가 생기면 Reader에 조건 플래그만 추가하면 되고, 기본 구조는 전체 순회로 유지. |
+| **커스텀 Redis 포트(SETNX/파이프라이닝)** | 자정 워밍 + 요청 즉시 응답, dismiss 즉시 반영, 하루 1건 고정 등을 구현하려면 SETNX/TTL/파이프라이닝 같은 세밀 제어가 필요하다. opsForValue()만으로는 네트워크 RTT와 상태 동기화 이슈를 다루기 어려워 현재 구조를 유지함 (§16). | 정책이 단순화되면 `ReminderCacheClient` 인터페이스는 유지한 채, 구현체를 Spring Cache/Caffeine 기반으로 교체 가능. 또한 “읽기 전용 캐시 = Spring Cache, 상태 전이 = 커스텀 포트”처럼 역할을 분할하는 하이브리드도 고려. |
+| **상태 전이 3단계(firstVisit, bannerSeen, dismissed)** | 기획이 확정된 상태(첫 방문 숨김 → 두 번째 노출 → 당일 dismiss)라서 상태 머신을 유지하는 것이 정책 충실도를 보장한다. 전이는 `ReminderStateMachine` 한 곳에 모였으므로 관리 부담도 낮다 (§15.2~15.3). | 정책이 단순화되면 상태 머신 결정 로직만 교체하면 된다. 예: “첫 방문에도 노출”이면 `MARK_FIRST_VISIT` 분기를 제거하고 SurfaceHint만 BANNER로 고치면 끝. |
+| **ReminderAlertNotifier & 재시도 알람** | 매일 23시/00시에 실패하면 다음날 전체 리마인드가 비어버리므로, 실패 감지가 중요하다. 현재는 로그 기반 기본 구현이며, 필요시 Slack/PagerDuty로 확장 가능 (§6.2). | 실제 실패율이 매우 낮고 다른 모니터링이 있다면, 빈을 `LoggingReminderAlertNotifier`로 유지해도 되고, 운영팀이 원하면 Slack/Webhook 버전을 추가하는 식으로 그때그때 조정 가능. |
+
+### 17.1 프론트 요구 변경 시 영향 범위
+```mermaid
+stateDiagram-v2
+    [*] --> FIRST_VISIT
+    FIRST_VISIT --> BANNER_ACTIVE: firstVisitAt 기록
+    BANNER_ACTIVE --> DISMISSED: dismissed=true
+    BANNER_ACTIVE --> BANNER_ACTIVE: 재방문
+    DISMISSED --> [*]
+```
+- **현재**: 위 3단계가 필수이므로 상태 다이어그램 자체를 바꿀 일은 거의 없다.
+- **변경 시나리오**: “즉시 노출” 정책이 들어오면 FIRST_VISIT 단계를 제거하고, `ReminderStateMachine`에서 `TransitionDecision`을 한 가지로 줄이면 된다. Redis/DB 구조는 그대로 유지된다.
+
+### 17.2 문서 반영 이유
+- 이번 섹션은 “왜 이런 구조를 유지하는가?”라는 질문이 반복돼, 답변 내용을 아키텍처 문서에 고정해 두자는 의도로 작성했다.
+- 새로운 검토 항목이 생기면 §17에 17.3, 17.4 형태로 계속 추가하면 된다 (예: “API Rate Limit 고려”, “멀티 테넌트 확장” 등).
+
+## 18. Reminder 관련 파일 관계도 (2025-02-13)
+
+### 18.1 컴포넌트 맵 (파일 기준)
+
+```mermaid
+flowchart LR
+    subgraph API Layer
+        Controller["NoteReminderController\nsrc/main/java/.../controller"]
+    end
+
+    subgraph Service Layer
+        Service["NoteReminderService\nservice"]
+        Scheduler["NoteReminderScheduler\nscheduler"]
+        Selector["NoteReminderSelector\nservice/support"]
+        TargetReader["ReminderTargetUserReader\nservice/support"]
+        StateMachine["ReminderStateMachine\nservice/support"]
+        CacheClient["ReminderCacheClient / RedisReminderCacheClient\nservice/support"]
+        CacheValue["NoteReminderCacheValue\nservice/support"]
+        Alert["ReminderAlertNotifier / LoggingReminderAlertNotifier\nservice/support"]
+    end
+
+    subgraph Persistence
+        Repository["NoteReminderRepository\nrepository"]
+        BookmarkRepo["NoteBookmarkRepository\nrepository"]
+        AnswerRepo["NoteAnswerRepository\nrepository"]
+        Mapper["NoteReminderMapper\nmapper"]
+        Domain["NoteReminder / NoteReminderPayload\ndomain"]
+        DTO["NoteReminderResponse / DismissRequest\ndto/reminder"]
+    end
+
+    subgraph Infra
+        Scheduler -->|23시 assign + 00시 warmup| Repository
+        Scheduler --> CacheClient
+        CacheClient --> Redis[(Redis)]
+        Repository --> Database[(PostgreSQL)]
+    end
+
+    Controller --> Service --> Repository
+    Service --> CacheClient
+    Service --> StateMachine
+    Service --> Mapper --> Domain
+    Service --> DTO
+    Scheduler --> TargetReader --> UserRepo["UserRepository\nuser"]
+    Scheduler --> Selector --> BookmarkRepo
+    Scheduler --> Selector --> AnswerRepo
+    Scheduler --> Alert
+    CacheClient --> CacheValue
+```
+
+### 18.2 흐름 설명
+- **API 요청 경로**: `NoteReminderController` → `NoteReminderService`. 서비스는 `ReminderStateMachine`으로 배너 상태를 결정하고, `NoteReminderRepository` + `ReminderCacheClient`를 통해 DB/Redis를 동기화한 뒤 `NoteReminderResponse`를 반환한다.
+- **23시 스냅샷**: `NoteReminderScheduler.snapshotNextDay` → `ReminderTargetUserReader.fetchAllUserIds()` → 각 사용자에 대해 `NoteReminderSelector.pickCandidate` (북마크/답변 레포지토리 + `NoteReminderMapper`) → `NoteReminderRepository` upsert → `ReminderCacheClient.evict`로 다음날 캐시 준비.
+- **00시 캐시 워밍**: 같은 스케줄러가 `NoteReminderRepository.streamAllByReminderDate(today)`를 읽어 `ReminderCacheClient.saveAll`로 Redis에 TTL 24h 저장.
+- **지원 도우미**: `ReminderAlertNotifier`는 재시도가 모두 실패할 때 알람을 전송하고, `NoteReminderCacheValue`는 Redis에 저장되는 JSON 구조를 캡슐화한다.
+
+> 이 다이어그램을 통해 리마인드 디렉토리에 추가된 모든 파일이 어디에 속하고 어떤 방향으로 의존하는지 한눈에 볼 수 있다. 신규 파일을 만들 때 동일 계층/패키지 원칙을 적용하면 설계 일관성을 유지할 수 있다.
