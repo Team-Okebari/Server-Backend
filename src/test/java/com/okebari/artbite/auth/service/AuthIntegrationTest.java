@@ -19,14 +19,22 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.okebari.artbite.AbstractContainerBaseTest;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.domain.user.UserRole;
 
+import software.amazon.awssdk.services.s3.S3Client;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = "cloud.aws.s3.bucket=dummy-bucket")
 public class AuthIntegrationTest extends AbstractContainerBaseTest {
+
+	@MockitoBean
+	private S3Client s3Client;
 
 	@LocalServerPort
 	private int port;

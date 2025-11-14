@@ -62,6 +62,10 @@ jobs:
           SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_NAVER_CLIENT_SECRET=${{ secrets.SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_NAVER_CLIENT_SECRET }}
           OAUTH2_REDIRECT_URI_SUCCESS=${{ secrets.OAUTH2_REDIRECT_URI_SUCCESS }}
           OAUTH2_LOGOUT_REDIRECT_URI_KAKAO=${{ secrets.OAUTH2_LOGOUT_REDIRECT_URI_KAKAO }}
+          AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+          AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
           DOCKER_IMAGE=artbite-backend:${{ github.sha }}
           EOF
           # === .env 파일 생성 끝 ===
