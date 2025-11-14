@@ -25,6 +25,7 @@ flowchart LR
   - `mainImageUrl`
   - `creatorName?`
   - `creatorJobTitle?`
+  - `category?` (`MURAL`, `EMOTICON`, `GRAPHIC`, `PRODUCT`, `FASHION`, `THREE_D`, `BRANDING`, `ILLUSTRATION`, `MEDIA_ART`, `FURNITURE`, `THEATER_SIGN`, `LANDSCAPE`, `ALBUM_ARTWORK`, `VISUAL_DIRECTING`, `NONE` 중 택 1)
 - `overview` / `retrospect` / `processes(2개)` / `question`
 - `creatorId` *(필수)*
 - `externalLink` *(선택)*
@@ -62,7 +63,8 @@ sequenceDiagram
 - `id`, `status`, `tagText`
 - `cover: NoteCoverResponse`
   - `title`, `teaser`, `mainImageUrl`, `creatorName`, `creatorJobTitle`, `publishedDate`
-  - `NoteCoverDto`에도 동일 필드 존재하여 생성/수정 시 재사용
+  - `categoryBadge?` (오늘 상세/미리보기에서만 내려오며, 다른 API에서는 `null`)
+  - `NoteCoverDto`에도 동일 base 필드 + `category` 존재하여 생성/수정 시 재사용
 - `overview`, `retrospect`, `processes(2)`, `question`, `answer`
 - `creatorId`, `creatorJobTitle` *(매퍼에서 Creator 정보 추출)*
 - `externalLink`, `creator`(Summary)
@@ -153,7 +155,7 @@ sequenceDiagram
 | API/기능 | 프론트 전달 DTO | 핵심 필드 |
 |----------|----------------|-----------|
 | `POST /api/admin/notes` | `NoteCreateRequest` | status, tagText, cover(title/teaser/mainImageUrl/creatorName?/creatorJobTitle?), overview, retrospect, processes(2), question, creatorId, externalLink |
-| `GET /api/notes/published/today-detail` | `TodayPublishedResponse` → `NoteResponse`/`NotePreviewResponse` | NoteResponse 전체 필드(cover 포함), preview는 커버 + overview(본문 100자) |
+| `GET /api/notes/published/today-detail` | `TodayPublishedResponse` → `NoteResponse`/`NotePreviewResponse` | NoteResponse 전체 필드(cover + `categoryBadge?`), preview는 커버 + overview(본문 100자, `categoryBadge?`) |
 | `GET /api/notes/archived/{id}` | `ArchivedNoteViewResponse` | `accessible` flag에 따라 `NoteResponse` 또는 `NotePreviewResponse` |
 | `GET /api/notes/bookmarks?keyword` | `BookmarkListItemResponse[]` | noteId, title, mainImageUrl, creatorName, tagText (검색 결과 강조용) |
 

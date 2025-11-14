@@ -49,7 +49,7 @@ class NoteQueryServiceTest {
 
 		NoteOverviewDto overview = new NoteOverviewDto("섹션", "미리보기", null);
 		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview);
-		when(noteMapper.toPreview(note, 100)).thenReturn(preview);
+		when(noteMapper.toPreviewWithCategory(note, 100)).thenReturn(preview);
 
 		NotePreviewResponse result = noteQueryService.getTodayPreview();
 
@@ -79,7 +79,8 @@ class NoteQueryServiceTest {
 			"https://img",
 			"creator",
 			"jobTitle",
-			LocalDate.now()
+			LocalDate.now(),
+			null
 		);
 		when(noteMapper.toCoverResponse(note)).thenReturn(cover);
 
@@ -104,7 +105,7 @@ class NoteQueryServiceTest {
 		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
 			.thenReturn(java.util.Optional.of(note));
 		NoteResponse response = mock(NoteResponse.class);
-		when(noteMapper.toResponse(note)).thenReturn(response);
+		when(noteMapper.toResponseWithCoverCategory(note)).thenReturn(response);
 
 		TodayPublishedResponse result = noteQueryService.getTodayPublishedDetail(1L);
 
@@ -121,7 +122,7 @@ class NoteQueryServiceTest {
 			.thenReturn(java.util.Optional.of(note));
 		NoteOverviewDto overview2 = new NoteOverviewDto("섹션", "preview", null);
 		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview2);
-		when(noteMapper.toPreview(note, 100)).thenReturn(preview);
+		when(noteMapper.toPreviewWithCategory(note, 100)).thenReturn(preview);
 
 		TodayPublishedResponse result = noteQueryService.getTodayPublishedDetail(2L);
 
