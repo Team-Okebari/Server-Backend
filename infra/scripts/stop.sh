@@ -59,25 +59,32 @@ echo "부가 인프라 스택이 병렬로 중지되었습니다."
 
 # ── 4️⃣ 메인 앱 스택 종료 ──
 echo ""
-echo "=== Stopping Main Application Stack (DB, Redis, App) ==="
+echo "=== Stopping Main Application Stack ==="
 DOWN_OPTS="down"
 if [ "$ENV_TYPE" = "local" ]; then
+  # local: DB + App
   DOWN_OPTS="down --volume"
-fi
-
-if [ -f "${ROOT_DIR}/.env" ]; then
-  ${DOCKER_COMPOSE_CMD} --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" ${DOWN_OPTS}
+  if [ -f "${ROOT_DIR}/.env" ]; then
+    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" ${DOWN_OPTS}
+  else
+    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" ${DOWN_OPTS}
+  fi
 else
-  ${DOCKER_COMPOSE_CMD} --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" ${DOWN_OPTS}
+  # prod: App만
+  if [ -f "${ROOT_DIR}/.env" ]; then
+    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${MAIN_COMPOSE_FILE}" down
+  else
+    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" -f "${MAIN_COMPOSE_FILE}" down
+  fi
 fi
 
 # ── 5️⃣ 네트워크 삭제 ──
 for net in "${NETWORK_NAME}" "${ELK_NETWORK_NAME}"; do
-  if docker network inspect "${net}" >/dev/null 2>&1; then
-    echo "Removing docker network '${net}'..."
-    docker network rm "${net}"
+  if docker network inspect "$net" >/dev/null 2>&1; then
+    echo "Removing docker network '$net'..."
+    docker network rm "$net"
   else
-    echo "Docker network '${net}' does not exist."
+    echo "Docker network '$net' does not exist."
   fi
 done
 

@@ -39,31 +39,32 @@ fi
 cd "$ROOT_DIR" || exit 1
 
 # ── 3️⃣ 네트워크 생성 ──
-if ! docker network inspect "${NETWORK_NAME}" >/dev/null 2>&1; then
-  echo "Creating docker network '${NETWORK_NAME}'..."
-  docker network create "${NETWORK_NAME}"
-else
-  echo "Docker network '${NETWORK_NAME}' exists."
-fi
-
-if ! docker network inspect "${ELK_NETWORK_NAME}" >/dev/null 2>&1; then
-  echo "Creating docker network '${ELK_NETWORK_NAME}'..."
-  docker network create "${ELK_NETWORK_NAME}"
-else
-  echo "Docker network '${ELK_NETWORK_NAME}' exists."
-fi
+for net in "${NETWORK_NAME}" "${ELK_NETWORK_NAME}"; do
+  if ! docker network inspect "$net" >/dev/null 2>&1; then
+    echo "Creating docker network '$net'..."
+    docker network create "$net"
+  else
+    echo "Docker network '$net' exists."
+  fi
+done
 
 # ── 4️⃣ ELK 스택 빌드 및 실행 ──
 echo ""
 echo "=== Building and Starting ELK Stack ==="
 if [ -f "${ROOT_DIR}/.env" ]; then
-  ${DOCKER_COMPOSE_CMD} --project-directory "${INFRA_ELK_DIR}" -f "${ELK_COMPOSE_FILE}" up -d --build --quiet-pull
+  $DOCKER_COMPOSE_CMD --project-directory "${INFRA_ELK_DIR}" -f "${ELK_COMPOSE_FILE}" up -d --build --quiet-pull
 fi
 
-# ── 5️⃣ 메인 앱 스택 실행 (DB, Redis, App) ──
+# ── 5️⃣ 메인 앱 스택 실행 ──
 echo ""
-echo "=== Starting Main Application Stack (DB, Redis, App) ==="
-  ${DOCKER_COMPOSE_CMD} --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" up --build -d
+echo "=== Starting Main Application Stack ==="
+if [ "$ENV_TYPE" = "local" ]; then
+  # local: DB + App
+  $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" up --build -d
+else
+  # prod: App만 (DB/Redis는 AWS 관리)
+  $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${MAIN_COMPOSE_FILE}" up --build -d
+fi
 
 echo ""
 echo "모든 서비스가 성공적으로 시작되었습니다!"

@@ -12,12 +12,12 @@ import org.springframework.stereotype.Component;
 
 import com.okebari.artbite.note.config.NoteReminderProperties;
 import com.okebari.artbite.note.domain.NoteReminder;
-import com.okebari.artbite.note.service.support.ReminderCacheClient;
+import com.okebari.artbite.note.repository.NoteReminderRepository;
 import com.okebari.artbite.note.service.support.NoteReminderSelector;
 import com.okebari.artbite.note.service.support.NoteReminderSelector.ReminderCandidate;
 import com.okebari.artbite.note.service.support.ReminderAlertNotifier;
+import com.okebari.artbite.note.service.support.ReminderCacheClient;
 import com.okebari.artbite.note.service.support.ReminderTargetUserReader;
-import com.okebari.artbite.note.repository.NoteReminderRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,19 +33,19 @@ public class NoteReminderScheduler {
 	// 2) 사용자별 후보 노트 중에서 1건을 결정하는 셀렉터
 	private final NoteReminderSelector selector;
 
-    // 3) `note_reminder_pot` JPA 레포지토리 (23시 upsert, 00시 워밍)
+	// 3) `note_reminder_pot` JPA 레포지토리 (23시 upsert, 00시 워밍)
 	private final NoteReminderRepository reminderRepository;
 
-    // 4) Redis 캐시 접근을 캡슐화한 포트 (save/get/evict)
+	// 4) Redis 캐시 접근을 캡슐화한 포트 (save/get/evict)
 	private final ReminderCacheClient cacheClient;
 
-    // 5) 재시도 실패 시 Slack 등으로 알람을 보내는 노티파이어
+	// 5) 재시도 실패 시 Slack 등으로 알람을 보내는 노티파이어
 	private final ReminderAlertNotifier alertNotifier;
 
-    // 6) `note.reminder.*` 설정값(재시도 횟수, 청크 크기, Redis batch 등)
+	// 6) `note.reminder.*` 설정값(재시도 횟수, 청크 크기, Redis batch 등)
 	private final NoteReminderProperties properties;
 
-    // 7) KST 기준 시각 계산용 Clock (테스트 주입 가능)
+	// 7) KST 기준 시각 계산용 Clock (테스트 주입 가능)
 	private final Clock clock;
 
 	/**
@@ -96,7 +96,8 @@ public class NoteReminderScheduler {
 					);
 				return;
 			} catch (Exception e) {
-				log.warn("Reminder pick failed userId={} attempt={}/{} date={}", userId, attempt, attempts, targetDate, e);
+				log.warn("Reminder pick failed userId={} attempt={}/{} date={}", userId, attempt, attempts, targetDate,
+					e);
 			}
 		}
 		alertNotifier.notifyFailure(

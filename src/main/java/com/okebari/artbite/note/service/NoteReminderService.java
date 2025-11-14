@@ -11,11 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.okebari.artbite.common.exception.ReminderNotFoundException;
 import com.okebari.artbite.note.domain.NoteReminder;
 import com.okebari.artbite.note.dto.reminder.NoteReminderResponse;
-import com.okebari.artbite.note.dto.reminder.SurfaceHint;
 import com.okebari.artbite.note.mapper.NoteReminderMapper;
 import com.okebari.artbite.note.repository.NoteReminderRepository;
-import com.okebari.artbite.note.service.support.ReminderCacheClient;
 import com.okebari.artbite.note.service.support.NoteReminderCacheValue;
+import com.okebari.artbite.note.service.support.ReminderCacheClient;
 import com.okebari.artbite.note.service.support.ReminderStateMachine;
 import com.okebari.artbite.note.service.support.ReminderStateSnapshot;
 

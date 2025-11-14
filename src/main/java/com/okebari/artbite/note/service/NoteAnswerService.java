@@ -3,6 +3,8 @@ package com.okebari.artbite.note.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.okebari.artbite.common.exception.NoteAccessDeniedException;
+import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.common.exception.NoteNotFoundException;
 import com.okebari.artbite.common.exception.UserNotFoundException;
 import com.okebari.artbite.domain.user.User;
@@ -11,8 +13,6 @@ import com.okebari.artbite.domain.user.UserRole;
 import com.okebari.artbite.note.domain.NoteAnswer;
 import com.okebari.artbite.note.domain.NoteQuestion;
 import com.okebari.artbite.note.dto.answer.NoteAnswerDto;
-import com.okebari.artbite.common.exception.NoteAccessDeniedException;
-import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.note.mapper.NoteMapper;
 import com.okebari.artbite.note.repository.NoteQuestionRepository;
 
