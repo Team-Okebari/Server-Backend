@@ -38,4 +38,10 @@ public interface NoteBookmarkRepository extends JpaRepository<NoteBookmark, Long
 		order by nb.createdAt desc
 		""")
 	List<NoteBookmark> searchByUserIdAndKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
+
+	@Query("select distinct nb.user.id from NoteBookmark nb")
+	List<Long> findDistinctUserIds();
+
+	@Query("select nb.note.id from NoteBookmark nb where nb.user.id = :userId")
+	List<Long> findNoteIdsByUserId(@Param("userId") Long userId);
 }

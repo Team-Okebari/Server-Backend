@@ -149,7 +149,7 @@ flowchart LR
 ### 12.2 데일리 타임라인
 | 시점 | 동작 | 비고 |
 |------|------|------|
-| 00:00 | `NoteReminderScheduler`가 유저별 후보군에서 랜덤 1건을 선택해 `note_reminder_digest`에 upsert | ShedLock/분산락으로 단일 실행 |
+| 00:00 | `NoteReminderScheduler`가 유저별 후보군에서 랜덤 1건을 선택해 `note_reminder_pot`에 upsert | ShedLock/분산락으로 단일 실행 |
 | 00:01 | 선택된 레코드를 Redis `note:reminder:{userId}:{yyyymmdd}` 키로 캐싱, TTL 24h | 캐시 miss 시 DB fallback |
 | 첫 접속 | `GET /api/notes/reminder/today` 응답의 `surfaceHint=PASSIVE`, `firstSeenAt` 저장 | 첫 화면은 상단 노출만 |
 | 두 번째 접속 이후 | `firstSeenAt` 존재 시 `surfaceHint=POPUP` 반환, 프론트는 팝업 노출 | 제공된 와이어프레임 반영 |
@@ -162,7 +162,7 @@ flowchart LR
 | `NoteReminderSelector` (Service support) | 북마크/답변을 통합 후보군으로 구성, 무작위 선택 알고리즘 | `ThreadLocalRandom + weighted list` 또는 SQL `TABLESAMPLE` |
 | `NoteReminderService` | CRUD 비즈니스 로직, 첫 접속/팝업 전환/숨김 처리 | 캐시·DB 일관성 유지 |
 | `NoteReminderController` | `GET /api/notes/reminder/today`, `POST /dismiss` REST 엔드포인트 | JWT 인증 필요 |
-| `NoteReminderRepository` | `note_reminder_digest` JPA 접근, `findByUserIdAndReminderDate` | 인덱스: `(user_id, reminder_date)` |
+| `NoteReminderRepository` | `note_reminder_pot` JPA 접근, `findByUserIdAndReminderDate` | 인덱스: `(user_id, reminder_date)` |
 | Redis 캐시 (`RedisTemplate`) | 당일 노트를 TTL 24시간 저장, 빠른 재방문 응답 | 키 규칙 `note:reminder:{userId}:{yyyymmdd}` |
 | 프론트 팝업 (Sparki 앱) | 상단 배너 및 팝업 UI 운영, 오늘 숨김 처리 | 와이어프레임 확정 후 픽스 |
 
@@ -192,7 +192,7 @@ src/main/java/com/okebari/artbite/note
     └── NoteReminderSelector.java (+) : 후보군 조합/랜덤 알고리즘
 
 src/main/resources/db/migration
-└── V4__create_note_reminder_digest_table.sql (+)
+└── V7__create_note_reminder_pot_table.sql (+)
 
 src/test/java/com/okebari/artbite/note
 ├── integration/NoteReminderIntegrationTest.java (+) : 스케줄러+캐시 E2E
@@ -309,7 +309,7 @@ flowchart TD
 ```
 
 ### 12.11 구현 로드맵 & 테스트
-1. **DB 스키마 추가**: `V4__create_note_reminder_digest_table.sql`에서 테이블, 인덱스, enum type 생성.
+1. **DB 스키마 추가**: `V7__create_note_reminder_pot_table.sql`에서 테이블, 인덱스, enum type 생성.
 2. **도메인/레포지토리**: `NoteReminder` 엔티티, JPA 레포지토리, QueryDSL 커스텀(필요 시) 구현.
 3. **후보군 셀렉터**: `NoteReminderSelector`에서 북마크/답변 union projection 및 랜덤 로직 작성, 단위 테스트(`NoteReminderSelectorTest`)로 분포 검증.
 4. **스케줄러**: `NoteReminderScheduler`에 chunk 처리, 분산락, idempotent upsert 추가. 통합 테스트(`NoteReminderIntegrationTest.publishRandomNotePerUser`) 작성.
@@ -322,5 +322,5 @@ flowchart TD
 - **대량 사용자 처리**: 사용자 수가 급증할 경우 배치 시간이 길어질 수 있으므로 chunk size, 비동기 스트림, 또는 “lazy selection + cache” 모드까지 고려.
 - **후보 고갈**: 특정 사용자가 북마크/답변을 모두 삭제한 경우 → API는 204 반환, 프리미엄 노트 추천으로 fallback.
 - **데이터 최신성**: 노트 제목/이미지가 수정되더라도 당일에는 스냅샷을 유지해야 하므로 `payload_snapshot`을 노출 기준으로 사용.
-- **중복 노출 방지**: 최근 7일 내에 보여준 노트를 제외하려면 `note_reminder_digest` 히스토리를 참고해 `NOT EXISTS` 조건을 추가.
+- **중복 노출 방지**: 최근 7일 내에 보여준 노트를 제외하려면 `note_reminder_pot` 히스토리를 참고해 `NOT EXISTS` 조건을 추가.
 - **시간대 일관성**: 모든 시간 계산은 `ZoneId.of("Asia/Seoul")` 기반 `LocalDate`로 고정, 서버 UTC 환경에서도 논리가 깨지지 않도록 `Clock` 주입 + 테스트 작성.

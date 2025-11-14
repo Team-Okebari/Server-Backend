@@ -30,6 +30,8 @@
 | 2.5 | Notes | GET | `/api/notes/archived/{noteId}` | USER/ADMIN | 지난 노트 상세/프리뷰 (구독 상태에 따라 분기) |
 | 2.6 | Notes | POST | `/api/notes/{noteId}/bookmark` | USER/ADMIN | 북마크 토글 |
 | 2.7 | Notes | GET | `/api/notes/bookmarks` | USER/ADMIN | 북마크 목록/검색 |
+| 2.8 | Notes | GET | `/api/notes/reminder/today` | USER/ADMIN | 당일 리마인드 배너 데이터 조회 |
+| 2.9 | Notes | POST | `/api/notes/reminder/dismiss` | USER/ADMIN | “오늘은 그만 보기” 처리 |
 | 3.1 | Admin Notes | POST | `/api/admin/notes` | ADMIN | 노트 생성 |
 | 3.2 | Admin Notes | PUT | `/api/admin/notes/{noteId}` | ADMIN | 노트 수정 |
 | 3.3 | Admin Notes | DELETE | `/api/admin/notes/{noteId}` | ADMIN | 노트 삭제 |
@@ -56,6 +58,8 @@
 | 2.5 | `GET /api/notes/archived/{noteId}` | USER / ADMIN | `noteId` | `ArchivedNoteViewResponse { accessible, note? = NoteResponse 전체 필드, preview? = NotePreviewResponse 전체 필드 }` |
 | 2.6 | `POST /api/notes/{noteId}/bookmark` | USER / ADMIN | `noteId` | `{ bookmarked: boolean }` |
 | 2.7 | `GET /api/notes/bookmarks?keyword` | USER / ADMIN | `keyword`(선택) | `BookmarkListItemResponse[] { noteId, title, mainImageUrl, creatorName, tagText }` |
+| 2.8 | `GET /api/notes/reminder/today` | USER / ADMIN | 없음 | `NoteReminderResponse { surfaceHint, noteId, title, mainImageUrl, sourceType, reminderDate, dismissed }` |
+| 2.9 | `POST /api/notes/reminder/dismiss` | USER / ADMIN | 없음 | 없음 (204) – 당일 배너 숨김 |
 | 3.1 | `POST /api/admin/notes` | ADMIN | `NoteCreateRequest` | `Long` (생성 ID) |
 | 3.2 | `PUT /api/admin/notes/{noteId}` | ADMIN | `noteId`, `NoteCreateRequest` | `NoteResponse` (필드 목록 아래 참고) |
 | 3.3 | `DELETE /api/admin/notes/{noteId}` | ADMIN | `noteId` | 없음 (`200`) |
@@ -124,6 +128,29 @@
 | `CreatorResponse` | Summary와 동일한 필드 세트 (현재 버전에서는 추가 필드 없음) |
 
 > [2025-11-05] today-preview/archived 프리뷰 분기, Bookmark 검색 결과 필드, `ArchivedNoteViewResponse` 구조를 최신 코드와 동기화했습니다.
+
+### 리마인드 전용 API
+
+#### 1) `GET /api/notes/reminder/today`
+- **설명**: 하루 한 번 선정된 리마인드 노트를 노출할지 여부와 페이로드를 반환합니다.
+- **인증**: USER/ADMIN
+- **응답** `NoteReminderResponse`
+
+| 필드 | 설명 |
+|------|------|
+| `surfaceHint` | `DEFERRED`(첫 접속), `BANNER`(배너 노출), `NONE`(노출 없음/숨김) |
+| `noteId` | 배너 CTA 클릭 시 `/notes/archived/{noteId}`로 이동하는 ID |
+| `title` | 노트 제목 (고정 멘트 아래에 노출) |
+| `mainImageUrl` | 썸네일 이미지 |
+| `sourceType` | `BOOKMARK` 또는 `ANSWER` (어떤 활동에서 선정되었는지) |
+| `reminderDate` | 이 페이로드가 유효한 날짜 |
+| `dismissed` | 당일 “오늘은 그만 보기” 여부 |
+
+#### 2) `POST /api/notes/reminder/dismiss`
+- **설명**: 사용자가 “오늘은 그만 보기”를 선택하면 호출. 당일 배너를 숨기고 `dismissed=true`로 기록합니다.
+- **요청 바디**: 없음
+- **응답**: 204 No Content
+- **비고**: 자정이 되면 상태가 초기화되어 다음날 새 노트가 동일 흐름을 따릅니다.
 
 ---
 
