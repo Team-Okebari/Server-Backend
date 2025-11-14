@@ -5,8 +5,8 @@
 
 | API | 최종 DTO | 프론트 수신 필드 (Mapper 조립 포함) |
 |-----|---------|--------------------------------|
-| `GET /api/notes/published/today-cover` | `NoteCoverResponse` | `title`, `teaser`, `mainImageUrl`, `creatorName`, `creatorJobTitle`, `publishedDate` |
-| `GET /api/notes/published/today-preview` | `NotePreviewResponse` | `id`, `cover { title, mainImageUrl, creatorName, creatorJobTitle, publishedDate } (teaser=null)`, `overview { sectionTitle, bodyText(<=100자), imageUrl }` |
+| `GET /api/notes/published/today-cover` | `NoteCoverResponse` | `title`, `teaser`, `mainImageUrl`, `creatorName`, `creatorJobTitle`, `publishedDate` *(카테고리 배지는 미노출)* |
+| `GET /api/notes/published/today-preview` | `NotePreviewResponse` | `id`, `cover { title, mainImageUrl, creatorName, creatorJobTitle, publishedDate, categoryBadge? } (teaser=null)`, `overview { sectionTitle, bodyText(<=100자), imageUrl }` |
 | `GET /api/notes/published/today-detail` | `TodayPublishedResponse` | `accessible`, `note`(`NoteResponse` 전체), `preview`(`NotePreviewResponse`) |
 | `GET /api/notes/archived` | `Page<ArchivedNoteSummaryResponse>` | 항목별 `id`, `tagText`, `title`, `mainImageUrl`, `creatorName`, `publishedDate` |
 | `GET /api/notes/archived/{id}` | `ArchivedNoteViewResponse` | `accessible`, `note?`(`NoteResponse` 전체), `preview?`(`NotePreviewResponse` 전체) |
@@ -20,7 +20,7 @@
 
 ### NoteResponse 전체 필드
 - `id`, `status`, `tagText`
-- `cover { title, teaser(2.1 한정), mainImageUrl, creatorName, creatorJobTitle, publishedDate }`
+- `cover { title, teaser(2.1 한정), mainImageUrl, creatorName, creatorJobTitle, publishedDate, categoryBadge? }`
 - `overview { sectionTitle, bodyText, imageUrl }`
 - `retrospect { sectionTitle, bodyText }`
 - `processes[] { position, sectionTitle, bodyText, imageUrl }`
@@ -33,7 +33,7 @@
 
 ### NotePreviewResponse 전체 필드
 - `id`
-- `cover { title, mainImageUrl, creatorName, creatorJobTitle, publishedDate } (teaser=null)`
+- `cover { title, mainImageUrl, creatorName, creatorJobTitle, publishedDate, categoryBadge? } (teaser=null)`
 - `overview { sectionTitle, bodyText(<=100자), imageUrl }`
 
 ### ArchivedNoteSummaryResponse
@@ -44,5 +44,7 @@
 
 ## 참고 사항
 - `NoteCoverDto`의 `creatorName/creatorJobTitle`은 **요청 시 optional**이며 Admin UI 프리뷰 용도. 서버 저장은 `creatorId`로만 처리하지만, 응답 시 매퍼가 `Creator` 엔티티에서 값을 다시 채운다.
+- `cover.categoryBadge`는 today-preview/today-detail에서만 내려오며, 다른 API에서는 `null`.
+- `categoryBadge.type`는 `NoteCategoryType` enum(`MURAL`, `EMOTICON`, `GRAPHIC`, `PRODUCT`, `FASHION`, `THREE_D`, `BRANDING`, `ILLUSTRATION`, `MEDIA_ART`, `FURNITURE`, `THEATER_SIGN`, `LANDSCAPE`, `ALBUM_ARTWORK`, `VISUAL_DIRECTING`, `NONE`) 중 하나다.
 - `ArchivedNoteViewResponse`는 `accessible` 플래그로 프론트가 단일 API 결과를 분기할 수 있도록 설계했다.
 - Bookmark 검색은 `NoteBookmarkRepository.searchByUserIdAndKeyword` → `NoteMapper.toBookmarkResponse` → Controller에서 `BookmarkListItemResponse`로 변환한다.
