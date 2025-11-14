@@ -1,5 +1,6 @@
 package com.okebari.artbite.domain.user;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,4 +12,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	@Query("SELECT u FROM User u LEFT JOIN FETCH u.memberships WHERE u.email = :email")
 	Optional<User> findByEmailWithMemberships(@Param("email") String email);
+
+	@Query("select u.id from User u")
+	List<Long> findAllUserIds();
 }

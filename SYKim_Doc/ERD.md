@@ -132,6 +132,56 @@
 | `user_id` | BIGINT | NOT NULL, FK → `users.id`, `ON DELETE CASCADE` |
 | `created_at` | TIMESTAMP WITH TIME ZONE | 기본값 `CURRENT_TIMESTAMP` |
 | *(보조 제약)* |  | `UNIQUE(note_id, user_id)`로 중복 북마크 차단 |
+
+## note_reminder_pot (`NoteReminder`)
+
+| 컬럼 | 타입 | 제약조건 및 설명 |
+| --- | --- | --- |
+| `id` | BIGINT | PK, `BIGSERIAL` |
+| `user_id` | BIGINT | NOT NULL, FK → `users.id`, `ON DELETE CASCADE` |
+| `note_id` | BIGINT | NOT NULL, FK → `notes_head.id`, `ON DELETE CASCADE` |
+| `reminder_date` | DATE | NOT NULL, `(user_id, reminder_date)` UNIQUE |
+| `source_type` | VARCHAR(30) | NOT NULL, enum(`BOOKMARK`, `ANSWER`) |
+| `payload_note_id` | BIGINT | 캐시 스냅샷용 note_id (보조 필드) |
+| `payload_title` | VARCHAR(60) | 배너에 노출할 노트 제목 |
+| `payload_main_image_url` | VARCHAR(255) | 배너 썸네일 |
+| `first_visit_at` | TIMESTAMP WITH TIME ZONE | 당일 첫 방문 시각 |
+| `banner_seen_at` | TIMESTAMP WITH TIME ZONE | 배너가 실제 노출된 시각(두 번째 방문) |
+| `modal_closed_at` | TIMESTAMP WITH TIME ZONE | X 모달에서 “취소” 선택 시각 |
+| `dismissed` | BOOLEAN | `true`면 당일 배너 숨김 |
+| `dismissed_at` | TIMESTAMP WITH TIME ZONE | dismiss 처리 시각 |
+| `created_at` / `updated_at` | TIMESTAMP WITH TIME ZONE | 감사 필드 (`BaseTimeEntity`) |
+| *(보조 인덱스)* |  | `idx_note_reminder_date`, `idx_note_reminder_user` |
+
+## memberships (`Membership`)
+
+| 컬럼 | 타입 | 제약조건 및 설명 |
+| --- | --- | --- |
+| `id` | BIGINT | PK, `BIGSERIAL` |
+| `user_id` | BIGINT | NOT NULL, FK → `users.id`, `ON DELETE CASCADE` |
+| `status` | VARCHAR(20) | NOT NULL, enum(`PENDING`, `ACTIVE`, `CANCELED`, `EXPIRED`) |
+| `plan_code` | VARCHAR(30) | 요금제 코드 |
+| `price` | INTEGER | 결제 금액 |
+| `start_date` | DATE | 구독 시작일 |
+| `end_date` | DATE | 구독 종료 예정일 |
+| `created_at` / `updated_at` | TIMESTAMP WITH TIME ZONE | 감사 필드 |
+
+## payments (`Payment`)
+
+| 컬럼 | 타입 | 제약조건 및 설명 |
+| --- | --- | --- |
+| `id` | BIGINT | PK, `BIGSERIAL` |
+| `membership_id` | BIGINT | NOT NULL, FK → `memberships.id`, `ON DELETE CASCADE` |
+| `user_id` | BIGINT | NOT NULL, FK → `users.id`, `ON DELETE CASCADE` |
+| `order_id` | VARCHAR(64) | NOT NULL, 토스페이먼트 주문 ID |
+| `payment_key` | VARCHAR(100) | NOT NULL, 토스페이먼트 결제 키 |
+| `amount` | INTEGER | 청구 금액 |
+| `currency` | VARCHAR(3) | 기본 `KRW` |
+| `status` | VARCHAR(20) | `REQUESTED`, `APPROVED`, `CANCELED`, ... |
+| `approved_at` | TIMESTAMP WITH TIME ZONE | 승인 시각 |
+| `canceled_at` | TIMESTAMP WITH TIME ZONE | 취소 시각 (선택) |
+| `created_at` / `updated_at` | TIMESTAMP WITH TIME ZONE | 감사 필드 |
+
 ## 관계 요약
 
 | 출발 테이블 | 관계 | 도착 테이블 | 설명 |
@@ -147,6 +197,11 @@
 | `users.id` | 1 ── `*` | `note_answer.user_id` | 사용자당 여러 답변 작성 가능 (NULL 허용) |
 | `users.id` | 1 ── `*` | `note_bookmark.user_id` | 사용자별 북마크 다수, 중복 방지 UNIQUE |
 | `notes_head.id` | 1 ── `*` | `note_bookmark.note_id` | 노트별 북마크 다수 (`ON DELETE CASCADE`) |
+| `users.id` | 1 ── `*` | `note_reminder_pot.user_id` | 사용자별 하루 1건 리마인드 스냅샷 |
+| `notes_head.id` | 1 ── `*` | `note_reminder_pot.note_id` | 리마인드에 사용된 노트를 추적 |
+| `users.id` | 1 ── `*` | `memberships.user_id` | 사용자당 여러 멤버십 이력 |
+| `memberships.id` | 1 ── `*` | `payments.membership_id` | 멤버십 갱신/결제 내역 |
+| `users.id` | 1 ── `*` | `payments.user_id` | 사용자별 결제 내역 |
 
 ---
 
@@ -165,6 +220,11 @@ erDiagram
     USERS ||--o{ NOTE_ANSWER : "작성"
     USERS ||--o{ NOTE_BOOKMARK : "북마크"
     NOTES_HEAD ||--o{ NOTE_BOOKMARK : "북마크"
+    USERS ||--o{ NOTE_REMINDER_POT : "리마인드"
+    NOTES_HEAD ||--o{ NOTE_REMINDER_POT : "리마인드"
+    USERS ||--o{ MEMBERSHIPS : "구독"
+    MEMBERSHIPS ||--o{ PAYMENTS : "결제"
+    USERS ||--o{ PAYMENTS : "결제"
 ```
 
 | FROM | 관계 | TO | 설명 |
@@ -180,3 +240,5 @@ erDiagram
 | USERS | ⟶ | NOTE_ANSWER | 사용자 ↔ 답변 다대일 |
 | USERS | ⟶ | NOTE_BOOKMARK | 사용자 ↔ 북마크 다대일 |
 | NOTES_HEAD | ⟶ | NOTE_BOOKMARK | 노트 ↔ 북마크 다대일 |
+| USERS | ⟶ | NOTE_REMINDER_POT | 사용자 ↔ 리마인드 스냅샷 (하루 1건) |
+| NOTES_HEAD | ⟶ | NOTE_REMINDER_POT | 노트 ↔ 리마인드 스냅샷 다대일 |
