@@ -1,7 +1,4 @@
-package com.okebari.artbite.note.exception;
-
-import com.okebari.artbite.common.exception.BusinessException;
-import com.okebari.artbite.common.exception.ErrorCode;
+package com.okebari.artbite.common.exception;
 
 /**
  * 노트 상태가 허용 범위를 벗어났을 때 발생시키는 예외.

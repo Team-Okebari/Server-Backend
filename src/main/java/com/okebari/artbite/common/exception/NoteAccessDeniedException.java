@@ -1,7 +1,4 @@
-package com.okebari.artbite.note.exception;
-
-import com.okebari.artbite.common.exception.BusinessException;
-import com.okebari.artbite.common.exception.ErrorCode;
+package com.okebari.artbite.common.exception;
 
 /**
  * 노트 접근 권한이 없는 경우 발생시키는 예외.

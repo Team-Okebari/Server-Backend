@@ -18,8 +18,8 @@ import com.okebari.artbite.note.dto.note.NotePreviewResponse;
 import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.TodayPublishedResponse;
 import com.okebari.artbite.note.dto.summary.ArchivedNoteSummaryResponse;
-import com.okebari.artbite.note.exception.NoteAccessDeniedException;
-import com.okebari.artbite.note.exception.NoteInvalidStatusException;
+import com.okebari.artbite.common.exception.NoteAccessDeniedException;
+import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.note.mapper.NoteMapper;
 import com.okebari.artbite.note.repository.NoteRepository;
 

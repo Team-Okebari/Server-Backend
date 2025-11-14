@@ -78,4 +78,12 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 		LocalDateTime startInclusive,
 		LocalDateTime endExclusive
 	);
+
+	@Query("""
+		select n from Note n
+		left join fetch n.cover
+		left join fetch n.creator
+		where n.id = :noteId
+		""")
+	Optional<Note> findWithCoverAndCreator(@Param("noteId") Long noteId);
 }
