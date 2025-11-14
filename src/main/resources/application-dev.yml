@@ -9,6 +9,10 @@ spring:
       ddl-auto: update
     # 데이터베이스 플랫폼은 PostgreSQL로 지정합니다.
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      ssl:
+        enabled: true
 
 # 개발 환경에서는 인증/인가 경로 외에도 필요한 경로를 화이트리스트에 추가할 수 있습니다.
 security:
