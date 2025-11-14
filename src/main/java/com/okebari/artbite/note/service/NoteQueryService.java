@@ -9,17 +9,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.common.exception.NoteNotFoundException;
 import com.okebari.artbite.note.domain.Note;
 import com.okebari.artbite.note.domain.NoteStatus;
 import com.okebari.artbite.note.dto.note.ArchivedNoteViewResponse;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
 import com.okebari.artbite.note.dto.note.NotePreviewResponse;
-import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.TodayPublishedResponse;
 import com.okebari.artbite.note.dto.summary.ArchivedNoteSummaryResponse;
-import com.okebari.artbite.common.exception.NoteAccessDeniedException;
-import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.note.mapper.NoteMapper;
 import com.okebari.artbite.note.repository.NoteRepository;
 
@@ -81,8 +79,8 @@ public class NoteQueryService {
 
 	/**
 	 * 구독 상태에 따라 지난 노트 전체/프리뷰를 제공한다.
-     * 무료구독자: 상세페이지의 preview 화면 제공
-     * 유료구독자: 상세페이지 전체 제공
+	 * 무료구독자: 상세페이지의 preview 화면 제공
+	 * 유료구독자: 상세페이지 전체 제공
 	 */
 	public ArchivedNoteViewResponse getArchivedNoteView(Long noteId, Long userId) {
 		Note note = noteRepository.findById(noteId)

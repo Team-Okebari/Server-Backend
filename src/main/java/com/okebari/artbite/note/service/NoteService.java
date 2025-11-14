@@ -5,6 +5,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.okebari.artbite.common.exception.NoteAccessDeniedException;
+import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.common.exception.NoteNotFoundException;
 import com.okebari.artbite.common.exception.UserNotFoundException;
 import com.okebari.artbite.creator.domain.Creator;
@@ -18,8 +20,6 @@ import com.okebari.artbite.note.domain.NoteStatus;
 import com.okebari.artbite.note.dto.note.NoteCreateRequest;
 import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.NoteUpdateRequest;
-import com.okebari.artbite.common.exception.NoteAccessDeniedException;
-import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.note.mapper.NoteMapper;
 import com.okebari.artbite.note.repository.NoteRepository;
 
