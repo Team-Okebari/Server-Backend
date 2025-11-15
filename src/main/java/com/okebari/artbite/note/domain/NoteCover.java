@@ -36,7 +36,7 @@ public class NoteCover {
 	@Column(nullable = false, length = 100)
 	private String teaser;
 
-	@Column(name = "main_image_url", nullable = false, length = 255)
+	@Column(name = "main_image_url", nullable = false, length = 500)
 	private String mainImageUrl;
 
 	@Enumerated(EnumType.STRING)

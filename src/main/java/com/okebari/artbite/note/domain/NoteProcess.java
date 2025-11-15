@@ -34,7 +34,7 @@ public class NoteProcess {
 	@Column(name = "body_text", nullable = false, length = 500)
 	private String bodyText;
 
-	@Column(name = "image_url", nullable = false, length = 255)
+	@Column(name = "image_url", nullable = false, length = 500)
 	private String imageUrl;
 
 	@Builder
