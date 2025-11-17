@@ -213,4 +213,19 @@
     <module name="BeforeExecutionExclusionFileFilter">
         <property name="fileNamePattern" value="TossPaymentTestController\.java$"/>
     </module>
+
+    <!-- Exclude NoteAdminTestController.java -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="NoteAdminTestController\.java$"/>
+    </module>
+
+    <!-- Exclude NoteUserTestController.java -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="NoteUserTestController\.java$"/>
+    </module>
+
+    <!-- Exclude CreatorTestController.java -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="CreatorTestController\.java$"/>
+    </module>
 </module>

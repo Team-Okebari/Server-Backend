@@ -2,9 +2,12 @@ package com.okebari.artbite.note.controller;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -72,5 +75,21 @@ public class NoteAnswerController {
 		@AuthenticationPrincipal CustomUserDetails userDetails) {
 		noteAnswerService.deleteAnswer(questionId, userDetails.getUser().getId());
 		return CustomApiResponse.success(null);
+	}
+
+	/**
+	 * USER가 자신의 답변을 조회한다.
+	 * 답변이 없으면 204 No Content를 반환한다.
+	 */
+	@PreAuthorize("hasRole('USER')")
+	@GetMapping("/{questionId}/answer")
+	public ResponseEntity<CustomApiResponse<NoteAnswerResponse>> get(
+		@PathVariable Long questionId,
+		@AuthenticationPrincipal CustomUserDetails userDetails) {
+		NoteAnswerDto dto = noteAnswerService.getAnswer(questionId, userDetails.getUser().getId());
+		if (dto == null) {
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		}
+		return ResponseEntity.ok(CustomApiResponse.success(new NoteAnswerResponse(dto.answerText())));
 	}
 }

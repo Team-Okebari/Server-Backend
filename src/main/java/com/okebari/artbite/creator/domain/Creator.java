@@ -35,25 +35,25 @@ public class Creator {
 	@Column(name = "job_title", length = 60)
 	private String jobTitle;
 
-	@Column(name = "profile_image_url", length = 255)
+	@Column(name = "profile_image_url", length = 500)
 	private String profileImageUrl;
 
-	@Column(name = "instagram_url", length = 255)
+	@Column(name = "instagram_url", length = 500)
 	private String instagramUrl;
 
-	@Column(name = "youtube_url", length = 255)
+	@Column(name = "youtube_url", length = 500)
 	private String youtubeUrl;
 
-	@Column(name = "behance_url", length = 255)
+	@Column(name = "behance_url", length = 500)
 	private String behanceUrl;
 
-	@Column(name = "x_url", length = 255)
+	@Column(name = "x_url", length = 500)
 	private String xUrl;
 
-	@Column(name = "blog_url", length = 255)
+	@Column(name = "blog_url", length = 500)
 	private String blogUrl;
 
-	@Column(name = "news_url", length = 255)
+	@Column(name = "news_url", length = 500)
 	private String newsUrl;
 
 	@Builder

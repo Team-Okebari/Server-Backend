@@ -38,13 +38,13 @@
 | `name` | VARCHAR(60) | NOT NULL |
 | `bio` | VARCHAR(100) | 작가 소개 |
 | `job_title` | VARCHAR(60) | 직위/직함 (작가 소개와 별개 항목) |
-| `profile_image_url` | VARCHAR(255) | 작가 프로필 이미지 URL |
-| `instagram_url` | VARCHAR(255) | 선택 |
-| `youtube_url` | VARCHAR(255) | 선택 |
-| `behance_url` | VARCHAR(255) | 선택 |
-| `x_url` | VARCHAR(255) | 선택 |
-| `blog_url` | VARCHAR(255) | 선택 |
-| `news_url` | VARCHAR(255) | 선택 |
+| `profile_image_url` | VARCHAR(500) | 작가 프로필 이미지 URL |
+| `instagram_url` | VARCHAR(500) | 선택 |
+| `youtube_url` | VARCHAR(500) | 선택 |
+| `behance_url` | VARCHAR(500) | 선택 |
+| `x_url` | VARCHAR(500) | 선택 |
+| `blog_url` | VARCHAR(500) | 선택 |
+| `news_url` | VARCHAR(500) | 선택 |
 
 > [2025-11-05] `job_title`과 `bio`를 별도 컬럼으로 명시하고 `profile_image_url` 컬럼 정의를 추가했습니다. `notes_head.creator_id` 설명도 애플리케이션 검증 조건에 맞게 조정했습니다.
 
@@ -69,7 +69,8 @@
 | `note_id` | BIGINT | PK, FK → `notes_head.id`, `ON DELETE CASCADE` |
 | `title` | VARCHAR(30) | NOT NULL |
 | `teaser` | VARCHAR(100) | NOT NULL |
-| `main_image_url` | VARCHAR(255) | NOT NULL |
+| `main_image_url` | VARCHAR(500) | NOT NULL |
+| `category` | VARCHAR(30) | NOT NULL, enum(`MURAL`,`EMOTICON`,`GRAPHIC`,`PRODUCT`,`FASHION`,`THREE_D`,`BRANDING`,`ILLUSTRATION`,`MEDIA_ART`,`FURNITURE`,`THEATER_SIGN`,`LANDSCAPE`,`ALBUM_ARTWORK`,`VISUAL_DIRECTING`,`NONE`), 기본값 `NONE` |
 | *(cardinality)* |  | 한 노트당 정확히 1행 유지 |
 
 ## note_overview (`NOTE_OVERVIEW`)
@@ -79,7 +80,7 @@
 | `note_id` | BIGINT | PK, FK → `notes_head.id`, `ON DELETE CASCADE` |
 | `section_title` | VARCHAR(30) | NOT NULL |
 | `body_text` | VARCHAR(200) | NOT NULL |
-| `image_url` | VARCHAR(255) | NOT NULL |
+| `image_url` | VARCHAR(500) | NOT NULL |
 | *(cardinality)* |  | 한 노트당 정확히 1행 유지 |
 
 ## note_process (`NOTE_PROCESS`)
@@ -90,7 +91,7 @@
 | `position` | SMALLINT | PK 구성, 1 또는 2 (`CHECK`) |
 | `section_title` | VARCHAR(30) | NOT NULL |
 | `body_text` | VARCHAR(500) | NOT NULL |
-| `image_url` | VARCHAR(255) | NOT NULL |
+| `image_url` | VARCHAR(500) | NOT NULL |
 | *(cardinality)* |  | 한 노트당 정확히 2행 (position 1,2) |
 
 ## note_retrospect (`NOTE_RETROSPECT`)
@@ -144,7 +145,7 @@
 | `source_type` | VARCHAR(30) | NOT NULL, enum(`BOOKMARK`, `ANSWER`) |
 | `payload_note_id` | BIGINT | 캐시 스냅샷용 note_id (보조 필드) |
 | `payload_title` | VARCHAR(60) | 배너에 노출할 노트 제목 |
-| `payload_main_image_url` | VARCHAR(255) | 배너 썸네일 |
+| `payload_main_image_url` | VARCHAR(500) | 배너 썸네일 |
 | `first_visit_at` | TIMESTAMP WITH TIME ZONE | 당일 첫 방문 시각 |
 | `banner_seen_at` | TIMESTAMP WITH TIME ZONE | 배너가 실제 노출된 시각(두 번째 방문) |
 | `modal_closed_at` | TIMESTAMP WITH TIME ZONE | X 모달에서 “취소” 선택 시각 |

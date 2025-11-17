@@ -39,8 +39,12 @@ import com.okebari.artbite.common.exception.EmailAlreadyExistsException;
 import com.okebari.artbite.common.exception.GlobalExceptionHandler;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRole;
+import org.springframework.test.context.TestPropertySource;
+
+import software.amazon.awssdk.services.s3.S3Client;
 
 @SpringBootTest
+@TestPropertySource(properties = "cloud.aws.s3.bucket=dummy-bucket")
 class AuthControllerTest extends AbstractContainerBaseTest {
 
 	private MockMvc mockMvc;
@@ -74,6 +78,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 	@MockitoBean
 	private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+	@MockitoBean
+	private S3Client s3Client;
 
 	@BeforeEach
 	void setup() {
@@ -194,7 +201,8 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		doNothing().when(jwtAuthenticationFilter)
 			.doFilter(any(), any(), any()); // JwtAuthenticationFilter가 SecurityContext를 덮어쓰지 않도록 Mocking
 
-		when(authService.logout(any(), any(), any(), any())).thenReturn(null); // Mock logout to return null for non-social logout
+		when(authService.logout(any(), any(), any(), any())).thenReturn(
+			null); // Mock logout to return null for non-social logout
 		// when & then
 		mockMvc.perform(post("/api/auth/logout")
 				.header("Authorization", "Bearer accessToken")

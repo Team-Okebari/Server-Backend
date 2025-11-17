@@ -17,10 +17,10 @@ import com.okebari.artbite.note.domain.Note;
 import com.okebari.artbite.note.domain.NoteStatus;
 import com.okebari.artbite.note.dto.note.ArchivedNoteViewResponse;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
+import com.okebari.artbite.note.dto.note.NoteOverviewDto;
 import com.okebari.artbite.note.dto.note.NotePreviewResponse;
 import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.TodayPublishedResponse;
-import com.okebari.artbite.note.dto.note.NoteOverviewDto;
 import com.okebari.artbite.note.mapper.NoteMapper;
 import com.okebari.artbite.note.repository.NoteRepository;
 
@@ -44,12 +44,14 @@ class NoteQueryServiceTest {
 		Note note = Note.builder()
 			.status(NoteStatus.PUBLISHED)
 			.build();
-		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
+		when(
+			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
+				any()))
 			.thenReturn(java.util.Optional.of(note));
 
 		NoteOverviewDto overview = new NoteOverviewDto("섹션", "미리보기", null);
 		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview);
-		when(noteMapper.toPreview(note, 100)).thenReturn(preview);
+		when(noteMapper.toPreviewWithCategory(note, 100)).thenReturn(preview);
 
 		NotePreviewResponse result = noteQueryService.getTodayPreview();
 
@@ -58,7 +60,9 @@ class NoteQueryServiceTest {
 
 	@Test
 	void getTodayPreviewThrowsWhenNoPublishedNote() {
-		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
+		when(
+			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
+				any()))
 			.thenReturn(java.util.Optional.empty());
 
 		assertThatThrownBy(() -> noteQueryService.getTodayPreview())
@@ -70,7 +74,9 @@ class NoteQueryServiceTest {
 		Note note = Note.builder()
 			.status(NoteStatus.PUBLISHED)
 			.build();
-		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
+		when(
+			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
+				any()))
 			.thenReturn(java.util.Optional.of(note));
 
 		NoteCoverResponse cover = new NoteCoverResponse(
@@ -79,7 +85,8 @@ class NoteQueryServiceTest {
 			"https://img",
 			"creator",
 			"jobTitle",
-			LocalDate.now()
+			LocalDate.now(),
+			null
 		);
 		when(noteMapper.toCoverResponse(note)).thenReturn(cover);
 
@@ -90,7 +97,9 @@ class NoteQueryServiceTest {
 
 	@Test
 	void getTodayCoverThrowsWhenNoPublishedNote() {
-		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
+		when(
+			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
+				any()))
 			.thenReturn(java.util.Optional.empty());
 
 		assertThatThrownBy(() -> noteQueryService.getTodayCover())
@@ -101,10 +110,12 @@ class NoteQueryServiceTest {
 	void getTodayPublishedDetailChecksSubscription() {
 		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
 		Note note = Note.builder().status(NoteStatus.PUBLISHED).build();
-		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
+		when(
+			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
+				any()))
 			.thenReturn(java.util.Optional.of(note));
 		NoteResponse response = mock(NoteResponse.class);
-		when(noteMapper.toResponse(note)).thenReturn(response);
+		when(noteMapper.toResponseWithCoverCategory(note, null)).thenReturn(response);
 
 		TodayPublishedResponse result = noteQueryService.getTodayPublishedDetail(1L);
 
@@ -117,11 +128,13 @@ class NoteQueryServiceTest {
 	void getTodayPublishedDetailReturnsPreviewForNonSubscriber() {
 		when(subscriptionService.isActiveSubscriber(2L)).thenReturn(false);
 		Note note = Note.builder().status(NoteStatus.PUBLISHED).build();
-		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
+		when(
+			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
+				any()))
 			.thenReturn(java.util.Optional.of(note));
 		NoteOverviewDto overview2 = new NoteOverviewDto("섹션", "preview", null);
 		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview2);
-		when(noteMapper.toPreview(note, 100)).thenReturn(preview);
+		when(noteMapper.toPreviewWithCategory(note, 100)).thenReturn(preview);
 
 		TodayPublishedResponse result = noteQueryService.getTodayPublishedDetail(2L);
 
@@ -132,7 +145,9 @@ class NoteQueryServiceTest {
 
 	@Test
 	void getTodayPublishedDetailThrowsWhenNoNote() {
-		when(noteRepository.findFirstByStatusAndPublishedAtBetween(eq(NoteStatus.PUBLISHED), any(), any()))
+		when(
+			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
+				any()))
 			.thenReturn(java.util.Optional.empty());
 
 		assertThatThrownBy(() -> noteQueryService.getTodayPublishedDetail(1L))
@@ -147,7 +162,7 @@ class NoteQueryServiceTest {
 		when(noteRepository.findById(5L)).thenReturn(java.util.Optional.of(note));
 		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
 		NoteResponse response = mock(NoteResponse.class);
-		when(noteMapper.toResponse(note)).thenReturn(response);
+		when(noteMapper.toResponse(note, null)).thenReturn(response);
 
 		ArchivedNoteViewResponse result = noteQueryService.getArchivedNoteView(5L, 1L);
 

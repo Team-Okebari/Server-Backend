@@ -12,6 +12,7 @@ import com.okebari.artbite.creator.mapper.CreatorMapper;
 import com.okebari.artbite.note.domain.Note;
 import com.okebari.artbite.note.domain.NoteAnswer;
 import com.okebari.artbite.note.domain.NoteBookmark;
+import com.okebari.artbite.note.domain.NoteCategoryType;
 import com.okebari.artbite.note.domain.NoteCover;
 import com.okebari.artbite.note.domain.NoteOverview;
 import com.okebari.artbite.note.domain.NoteProcess;
@@ -20,6 +21,7 @@ import com.okebari.artbite.note.domain.NoteRetrospect;
 import com.okebari.artbite.note.dto.answer.NoteAnswerDto;
 import com.okebari.artbite.note.dto.answer.NoteAnswerResponse;
 import com.okebari.artbite.note.dto.bookmark.NoteBookmarkResponse;
+import com.okebari.artbite.note.dto.note.CategoryBadgeResponse;
 import com.okebari.artbite.note.dto.note.NoteCoverDto;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
 import com.okebari.artbite.note.dto.note.NoteCreateRequest;
@@ -69,7 +71,15 @@ public class NoteMapper {
 
 	// Note 엔티티를 단건 조회 응답 DTO로 변환한다.
 	// 질문·답변 등 하위 구성요소는 각각 전용 변환 메서드를 통해 조립한다.
-	public NoteResponse toResponse(Note note) {
+	public NoteResponse toResponse(Note note, NoteAnswerDto userAnswer) {
+		return buildNoteResponse(note, false, userAnswer);
+	}
+
+	public NoteResponse toResponseWithCoverCategory(Note note, NoteAnswerDto userAnswer) {
+		return buildNoteResponse(note, true, userAnswer);
+	}
+
+	private NoteResponse buildNoteResponse(Note note, boolean includeCategory, NoteAnswerDto userAnswer) {
 		Creator creator = note.getCreator();
 		CreatorSummaryDto creatorSummary = creator != null ? creatorMapper.toSummary(creator) : null;
 		Long creatorId = creator != null ? creator.getId() : null;
@@ -82,7 +92,7 @@ public class NoteMapper {
 			note.getId(),
 			note.getStatus(),
 			note.getTagText(),
-			buildCoverResponse(note, false),
+			buildCoverResponse(note, false, includeCategory),
 			toOverviewDto(note.getOverview()),
 			toRetrospectDto(note.getRetrospect()),
 			note.getProcesses() != null
@@ -91,7 +101,7 @@ public class NoteMapper {
 				.toList()
 				: List.of(),
 			toQuestionDto(note.getQuestion()),
-			toAnswerResponse(note.getQuestion() != null ? note.getQuestion().getAnswer() : null),
+			toAnswerResponse(userAnswer),
 			creatorId,
 			creatorJobTitle,
 			externalLink,
@@ -105,6 +115,14 @@ public class NoteMapper {
 
 	// 무료 사용자 미리보기 용도로 커버/요약 텍스트만 추린다.
 	public NotePreviewResponse toPreview(Note note, int overviewLimit) {
+		return buildPreview(note, overviewLimit, false);
+	}
+
+	public NotePreviewResponse toPreviewWithCategory(Note note, int overviewLimit) {
+		return buildPreview(note, overviewLimit, true);
+	}
+
+	private NotePreviewResponse buildPreview(Note note, int overviewLimit, boolean includeCategory) {
 		NoteOverviewDto overview = toOverviewDto(note.getOverview());
 		if (overview != null && overview.bodyText() != null && overview.bodyText().length() > overviewLimit) {
 			overview = new NoteOverviewDto(
@@ -116,7 +134,7 @@ public class NoteMapper {
 
 		return new NotePreviewResponse(
 			note.getId(),
-			buildCoverResponse(note, false),
+			buildCoverResponse(note, false, includeCategory),
 			overview
 		);
 	}
@@ -165,11 +183,11 @@ public class NoteMapper {
 	}
 
 	// NoteAnswer → 프론트 응답 DTO. answerText만 싣는다.
-	public NoteAnswerResponse toAnswerResponse(NoteAnswer answer) {
-		if (answer == null) {
+	public NoteAnswerResponse toAnswerResponse(NoteAnswerDto answerDto) {
+		if (answerDto == null) {
 			return null;
 		}
-		return new NoteAnswerResponse(answer.getAnswerText());
+		return new NoteAnswerResponse(answerDto.answerText());
 	}
 
 	// 표지 DTO → 엔티티 변환.
@@ -181,6 +199,7 @@ public class NoteMapper {
 			.title(dto.title())
 			.teaser(dto.teaser())
 			.mainImageUrl(dto.mainImageUrl())
+			.category(dto.category())
 			.build();
 	}
 
@@ -263,10 +282,14 @@ public class NoteMapper {
 		if (question == null) {
 			return null;
 		}
-		return new NoteQuestionDto(question.getQuestionText());
+		return new NoteQuestionDto(question.getId(), question.getQuestionText());
 	}
 
 	private NoteCoverResponse buildCoverResponse(Note note, boolean includeTeaser) {
+		return buildCoverResponse(note, includeTeaser, false);
+	}
+
+	private NoteCoverResponse buildCoverResponse(Note note, boolean includeTeaser, boolean includeCategory) {
 		NoteCover cover = note.getCover();
 		String creatorName = note.getCreator() != null ? note.getCreator().getName() : null;
 		String creatorJobTitle = note.getCreator() != null ? note.getCreator().getJobTitle() : null;
@@ -277,8 +300,20 @@ public class NoteMapper {
 			cover != null ? cover.getMainImageUrl() : null,
 			creatorName,
 			creatorJobTitle,
-			toDateOnly(note.getPublishedAt())
+			toDateOnly(note.getPublishedAt()),
+			includeCategory ? toCategoryBadge(cover) : null
 		);
+	}
+
+	private CategoryBadgeResponse toCategoryBadge(NoteCover cover) {
+		if (cover == null || cover.getCategory() == null) {
+			return null;
+		}
+		NoteCategoryType categoryType = cover.getCategory();
+		if (categoryType == NoteCategoryType.NONE) {
+			return null;
+		}
+		return new CategoryBadgeResponse(categoryType.name(), categoryType.getLabel());
 	}
 
 	private LocalDate toDateOnly(LocalDateTime dateTime) {

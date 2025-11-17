@@ -13,6 +13,7 @@ import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.common.exception.NoteNotFoundException;
 import com.okebari.artbite.note.domain.Note;
 import com.okebari.artbite.note.domain.NoteStatus;
+import com.okebari.artbite.note.dto.answer.NoteAnswerDto;
 import com.okebari.artbite.note.dto.note.ArchivedNoteViewResponse;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
 import com.okebari.artbite.note.dto.note.NotePreviewResponse;
@@ -37,6 +38,7 @@ public class NoteQueryService {
 	private final NoteRepository noteRepository;
 	private final NoteMapper noteMapper;
 	private final SubscriptionService subscriptionService;
+	private final NoteAnswerService noteAnswerService;
 
 	/**
 	 * 무료 사용자에게 제공하는 노트 미리보기.
@@ -44,7 +46,7 @@ public class NoteQueryService {
 	 */
 	public NotePreviewResponse getTodayPreview() {
 		Note note = findTodayPublishedNote();
-		return noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
+		return noteMapper.toPreviewWithCategory(note, OVERVIEW_PREVIEW_LIMIT);
 	}
 
 	/**
@@ -61,10 +63,15 @@ public class NoteQueryService {
 		Note note = findTodayPublishedNote();
 		boolean accessible = subscriptionService.isActiveSubscriber(userId);
 		if (!accessible) {
-			NotePreviewResponse preview = noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
+			NotePreviewResponse preview = noteMapper.toPreviewWithCategory(note, OVERVIEW_PREVIEW_LIMIT);
 			return new TodayPublishedResponse(false, null, preview);
 		}
-		return new TodayPublishedResponse(true, noteMapper.toResponse(note), null);
+		// Fetch user's answer if question exists
+		NoteAnswerDto userAnswer = null;
+		if (note.getQuestion() != null) {
+			userAnswer = noteAnswerService.getAnswer(note.getQuestion().getId(), userId);
+		}
+		return new TodayPublishedResponse(true, noteMapper.toResponseWithCoverCategory(note, userAnswer), null);
 	}
 
 	/**
@@ -91,7 +98,12 @@ public class NoteQueryService {
 
 		boolean subscribed = subscriptionService.isActiveSubscriber(userId);
 		if (subscribed) {
-			return new ArchivedNoteViewResponse(true, noteMapper.toResponse(note), null);
+			// Fetch user's answer if question exists
+			NoteAnswerDto userAnswer = null;
+			if (note.getQuestion() != null) {
+				userAnswer = noteAnswerService.getAnswer(note.getQuestion().getId(), userId);
+			}
+			return new ArchivedNoteViewResponse(true, noteMapper.toResponse(note, userAnswer), null);
 		}
 		NotePreviewResponse preview = noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
 		return new ArchivedNoteViewResponse(false, null, preview);
@@ -101,7 +113,7 @@ public class NoteQueryService {
 		LocalDate today = LocalDate.now(KST);
 		LocalDateTime start = today.atStartOfDay();
 		LocalDateTime end = start.plusDays(1);
-		return noteRepository.findFirstByStatusAndPublishedAtBetween(
+		return noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(
 			NoteStatus.PUBLISHED,
 			start,
 			end

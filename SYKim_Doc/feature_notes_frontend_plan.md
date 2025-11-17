@@ -58,16 +58,30 @@ export interface NoteProcessDto {
   imageUrl: string;
 }
 
+export type NoteCategoryType = 'FREE' | 'PREMIUM' | 'GENERAL';
+
+export interface CategoryBadgeResponse {
+  type: NoteCategoryType;
+  label: string;
+}
+
 export interface NoteCoverDto {
   title: string;
   teaser: string;
   mainImageUrl: string;
   creatorName?: string;
   creatorJobTitle?: string;
+  category?: NoteCategoryType;
 }
 
-export interface NoteCoverResponse extends NoteCoverDto {
+export interface NoteCoverResponse {
+  title: string;
+  teaser?: string;
+  mainImageUrl: string;
+  creatorName?: string;
+  creatorJobTitle?: string;
   publishedDate?: string;
+  categoryBadge?: CategoryBadgeResponse;
 }
 
 export interface NoteOverviewDto {

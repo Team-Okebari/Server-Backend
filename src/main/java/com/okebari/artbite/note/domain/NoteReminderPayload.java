@@ -22,7 +22,7 @@ public class NoteReminderPayload {
 	@Column(name = "payload_title", length = 60)
 	private String title;
 
-	@Column(name = "payload_main_image_url", length = 255)
+	@Column(name = "payload_main_image_url", length = 500)
 	private String mainImageUrl;
 
 	public NoteReminderPayload copyWithNoteId(Long noteId) {

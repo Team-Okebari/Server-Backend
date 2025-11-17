@@ -1,0 +1,2 @@
+ALTER TABLE note_cover
+    ADD COLUMN category VARCHAR(30) DEFAULT 'NONE' NOT NULL;

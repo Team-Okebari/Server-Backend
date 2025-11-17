@@ -38,3 +38,41 @@
 ## 5. 다음 단계
 - 기존 프론트 코드에서 `creator` 객체를 통해 이름/직함을 얻고 있었다면, 필요 시 `cover.creatorName`으로 치환할 수 있는지 검토.
 - `NoteCoverDto`를 소비하는 다른 문서나 SDK가 있다면 동일 업데이트를 반영.
+
+---
+
+## 6. 카테고리 배지 필드 추가 (2025-02-13)
+- **배경**: 무료 상세(`today-preview`)와 유료 상세(`today-detail`)에서만 카테고리 배지를 노출해야 해, 커버 단위로 카테고리 값을 보관하고 선택적인 응답 필드를 내려주도록 확장했다.
+- **주요 수정**
+  | 파일 | 내용 |
+  |------|------|
+  | `src/main/java/com/okebari/artbite/note/domain/NoteCategoryType.java` | 카테고리 enum (`FREE`, `PREMIUM`, `GENERAL`) 신설 |
+  | `note_cover` 테이블 | `category` 컬럼 추가 (`V8__add_category_to_note_cover.sql`) |
+  | `NoteCover` 엔티티 / `NoteCoverDto` | `category` 필드 보유 (요청 시 optional, 기본값 `GENERAL`) |
+  | `NoteCoverResponse` | `category` 대신 `CategoryBadgeResponse { type, label }` 필드를 추가해 today-preview/detail에서만 노출 |
+  | `NoteMapper` | `toPreviewWithCategory`, `toResponseWithCoverCategory` 등으로 분리해 두 페이지에서만 배지를 세팅 |
+- **프론트 영향**
+  - Admin 작성/수정 폼(`NoteCoverDto`)에서 `category` 값을 전달하면 DB에 저장되고, today-preview/detail API에선 `cover.categoryBadge`로 바로 랜더링할 수 있다.
+  - 기타 API(`archived`, `bookmarks`, `today-cover`)에는 배지가 내려가지 않으므로 기존 UI에는 영향이 없다.
+- **카테고리 목록**
+  - `MURAL(벽화)`, `EMOTICON(이모티콘)`, `GRAPHIC(그래픽)`, `PRODUCT(제품)`, `FASHION(패션)`, `THREE_D(3D)`, `BRANDING(브랜딩)`, `ILLUSTRATION(일러스트)`, `MEDIA_ART(미디어아트)`, `FURNITURE(가구)`, `THEATER_SIGN(극장 손간판)`, `LANDSCAPE(조경)`, `ALBUM_ARTWORK(음반 아트워크)`, `VISUAL_DIRECTING(비주얼 디렉팅)`, `NONE(카테고리 없음)`
+
+### 6.1 카테고리 노출 흐름
+
+```mermaid
+flowchart LR
+    Admin["Admin 노트 작성/수정\nNoteCoverDto.category"] -->|저장| NoteCover["note_cover.category<br/>(Enum)"]
+    NoteCover --> Mapper["NoteMapper"]
+    Mapper -->|today-preview/detail 호출| PreviewResponse["NotePreviewResponse\ncover.categoryBadge (선택)"]
+    Mapper -->|today-detail 구독자| DetailResponse["NoteResponse\ncover.categoryBadge (선택)"]
+    Mapper -->|그 외 API| OtherResponses["기타 응답\n(category 미포함)"]
+```
+
+1. **입력**: Admin이 `NoteCoverDto.category`에 위 Enum 중 하나를 선택(미선택 시 `NONE`).
+2. **저장**: `NoteCover` 엔티티와 `note_cover.category` 컬럼에 그대로 기록.
+3. **매퍼 분기**  
+   - `NoteMapper.toPreviewWithCategory` / `toResponseWithCoverCategory`: today-preview / today-detail에서만 `CategoryBadgeResponse(type, label)`을 생성해 `cover.categoryBadge`에 포함.  
+   - `NoteMapper.toPreview`, `toResponse`, `toCoverResponse` 등 다른 매퍼 경로는 배지를 채우지 않음.
+4. **프론트 노출**  
+   - 무료 상세(today-preview)와 유료 상세(today-detail)에서만 `cover.categoryBadge`가 렌더링된다.  
+   - `type` 값은 Enum 이름(MURAL 등), `label`은 한글 라벨(벽화 등).
