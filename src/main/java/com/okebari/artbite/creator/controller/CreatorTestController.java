@@ -53,16 +53,16 @@ public class CreatorTestController {
 			        <div class="container">
 			            <h2>작가 등록</h2>
 			            <form id="creator-form">
-			                <div class="form-group"><label for="name">이름 (*필수)</label><input type="text" id="name" value="새로운 작가"></div>
-			                <div class="form-group"><label for="bio">소개</label><input type="text" id="bio" value="안녕하세요. 새로운 작가입니다."></div>
-			                <div class="form-group"><label for="jobTitle">직무</label><input type="text" id="jobTitle" value="일러스트레이터"></div>
-			                <div class="form-group"><label for="profile-image-file">프로필 이미지 파일</label><input type="file" id="profile-image-file" accept="image/*"></div>
-			                <div class="form-group"><label for="instagramUrl">인스타그램 URL</label><input type="text" id="instagramUrl"></div>
-			                <div class="form-group"><label for="youtubeUrl">유튜브 URL</label><input type="text" id="youtubeUrl"></div>
-			                <div class="form-group"><label for="behanceUrl">Behance URL</label><input type="text" id="behanceUrl"></div>
-			                <div class="form-group"><label for="xUrl">X (트위터) URL</label><input type="text" id="xUrl"></div>
-			                <div class="form-group"><label for="blogUrl">블로그 URL</label><input type="text" id="blogUrl"></div>
-			                <div class="form-group"><label for="newsUrl">뉴스 URL</label><input type="text" id="newsUrl"></div>
+			                <div class="form-group"><label for="name">이름 (*필수, 최대 60자)</label><input type="text" id="name" value="새로운 작가"></div>
+			                <div class="form-group"><label for="bio">소개 (최대 100자)</label><input type="text" id="bio" value="안녕하세요. 새로운 작가입니다."></div>
+			                <div class="form-group"><label for="jobTitle">직무 (최대 60자)</label><input type="text" id="jobTitle" value="일러스트레이터"></div>
+			                <div class="form-group"><label for="profile-image-file">프로필 이미지 파일 (최대 500자 URL)</label><input type="file" id="profile-image-file" accept="image/*"></div>
+			                <div class="form-group"><label for="instagramUrl">인스타그램 URL (최대 500자)</label><input type="text" id="instagramUrl"></div>
+			                <div class="form-group"><label for="youtubeUrl">유튜브 URL (최대 500자)</label><input type="text" id="youtubeUrl"></div>
+			                <div class="form-group"><label for="behanceUrl">Behance URL (최대 500자)</label><input type="text" id="behanceUrl"></div>
+			                <div class="form-group"><label for="xUrl">X (트위터) URL (최대 500자)</label><input type="text" id="xUrl"></div>
+			                <div class="form-group"><label for="blogUrl">블로그 URL (최대 500자)</label><input type="text" id="blogUrl"></div>
+			                <div class="form-group"><label for="newsUrl">뉴스 URL (최대 500자)</label><input type="text" id="newsUrl"></div>
 			                <button type="button" onclick="createCreator()">작가 등록</button>
 			                <div class="spinner" id="loading-spinner"></div>
 			            </form>

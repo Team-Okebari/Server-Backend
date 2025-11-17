@@ -14,6 +14,7 @@ import com.okebari.artbite.note.domain.NoteAnswer;
 import com.okebari.artbite.note.domain.NoteQuestion;
 import com.okebari.artbite.note.dto.answer.NoteAnswerDto;
 import com.okebari.artbite.note.mapper.NoteMapper;
+import com.okebari.artbite.note.repository.NoteAnswerRepository;
 import com.okebari.artbite.note.repository.NoteQuestionRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class NoteAnswerService {
 
 	private final NoteQuestionRepository questionRepository;
 	private final UserRepository userRepository;
+	private final NoteAnswerRepository noteAnswerRepository; // Injected
 	private final NoteMapper noteMapper;
 
 	/**
@@ -35,17 +37,19 @@ public class NoteAnswerService {
 		User user = loadUser(userId);
 		NoteQuestion question = loadQuestion(questionId);
 
-		if (question.getAnswer() != null) {
-			throw new NoteInvalidStatusException("이미 등록된 답변이 있습니다. 수정 API를 사용하세요.");
-		}
+		// Check if an answer already exists for this user and question
+		noteAnswerRepository.findByQuestionIdAndRespondentId(questionId, userId)
+			.ifPresent(answer -> {
+				throw new NoteInvalidStatusException("이미 등록된 답변이 있습니다. 수정 API를 사용하세요.");
+			});
 
 		NoteAnswer answer = NoteAnswer.builder()
 			.respondent(user)
 			.answerText(answerText)
 			.build();
-		question.assignAnswer(answer);
+		answer.bindQuestion(question); // Manually bind the question
 
-		return noteMapper.toAnswerDto(questionRepository.save(question).getAnswer());
+		return noteMapper.toAnswerDto(noteAnswerRepository.save(answer));
 	}
 
 	/**
@@ -54,18 +58,14 @@ public class NoteAnswerService {
 	 */
 	public NoteAnswerDto updateAnswer(Long questionId, Long userId, String answerText) {
 		loadUser(userId); // 권한 검증
-		NoteQuestion question = loadQuestion(questionId);
+		loadQuestion(questionId); // 질문 존재 여부 확인
 
-		NoteAnswer answer = question.getAnswer();
-		if (answer == null) {
-			throw new NoteInvalidStatusException("등록된 답변이 없습니다. 먼저 생성하세요.");
-		}
-		if (answer.getRespondent() != null && !answer.getRespondent().getId().equals(userId)) {
-			throw new NoteAccessDeniedException("다른 사용자의 답변은 수정할 수 없습니다.");
-		}
+		NoteAnswer answer = noteAnswerRepository.findByQuestionIdAndRespondentId(questionId, userId)
+			.orElseThrow(() -> new NoteInvalidStatusException("등록된 답변이 없습니다. 먼저 생성하세요."));
 
+		// No need to check respondent ID here, as findByQuestionIdAndRespondentId already ensures it.
 		answer.update(answerText);
-		return noteMapper.toAnswerDto(questionRepository.save(question).getAnswer());
+		return noteMapper.toAnswerDto(noteAnswerRepository.save(answer));
 	}
 
 	/**
@@ -73,18 +73,24 @@ public class NoteAnswerService {
 	 */
 	public void deleteAnswer(Long questionId, Long userId) {
 		loadUser(userId); // 권한 검증
-		NoteQuestion question = loadQuestion(questionId);
+		loadQuestion(questionId); // 질문 존재 여부 확인
 
-		NoteAnswer answer = question.getAnswer();
-		if (answer == null) {
-			throw new NoteInvalidStatusException("삭제할 답변이 존재하지 않습니다.");
-		}
-		if (answer.getRespondent() != null && !answer.getRespondent().getId().equals(userId)) {
-			throw new NoteAccessDeniedException("다른 사용자의 답변은 삭제할 수 없습니다.");
-		}
+		NoteAnswer answer = noteAnswerRepository.findByQuestionIdAndRespondentId(questionId, userId)
+			.orElseThrow(() -> new NoteInvalidStatusException("삭제할 답변이 존재하지 않습니다."));
 
-		question.assignAnswer(null);
-		questionRepository.save(question);
+		noteAnswerRepository.delete(answer);
+	}
+
+	/**
+	 * USER 롤 사용자가 자신의 답변을 조회한다.
+	 */
+	public NoteAnswerDto getAnswer(Long questionId, Long userId) {
+		loadUser(userId); // 권한 검증
+		loadQuestion(questionId); // 질문 존재 여부 확인
+
+		return noteAnswerRepository.findByQuestionIdAndRespondentId(questionId, userId)
+			.map(noteMapper::toAnswerDto)
+			.orElse(null); // Return null if no answer found for the user
 	}
 
 	private User loadUser(Long userId) {

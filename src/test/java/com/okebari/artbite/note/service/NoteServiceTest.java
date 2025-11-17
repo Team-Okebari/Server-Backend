@@ -1,7 +1,7 @@
 package com.okebari.artbite.note.service;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
@@ -14,15 +14,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.okebari.artbite.common.exception.NoteAccessDeniedException;
+import com.okebari.artbite.common.exception.NoteInvalidStatusException;
+import com.okebari.artbite.creator.domain.Creator;
+import com.okebari.artbite.creator.repository.CreatorRepository;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.domain.user.UserRole;
 import com.okebari.artbite.note.domain.Note;
-import com.okebari.artbite.creator.domain.Creator;
-import com.okebari.artbite.creator.repository.CreatorRepository;
-import com.okebari.artbite.common.exception.NoteAccessDeniedException;
-import com.okebari.artbite.common.exception.NoteInvalidStatusException;
-import com.okebari.artbite.note.repository.NoteRepository;
 import com.okebari.artbite.note.domain.NoteStatus;
 import com.okebari.artbite.note.dto.note.NoteCoverDto;
 import com.okebari.artbite.note.dto.note.NoteCreateRequest;
@@ -33,6 +32,7 @@ import com.okebari.artbite.note.dto.note.NoteRetrospectDto;
 import com.okebari.artbite.note.dto.note.NoteUpdateRequest;
 import com.okebari.artbite.note.dto.question.NoteQuestionDto;
 import com.okebari.artbite.note.mapper.NoteMapper;
+import com.okebari.artbite.note.repository.NoteRepository;
 
 /**
  * NoteService 핵심 시나리오를 검증하는 단위 테스트.
@@ -80,7 +80,7 @@ class NoteServiceTest {
 		User normalUser = buildUser(UserRole.USER, 10L);
 		when(userRepository.findById(10L)).thenReturn(Optional.of(normalUser));
 
-        NoteCreateRequest request = createNoteRequest(NoteStatus.IN_PROGRESS, 1L);
+		NoteCreateRequest request = createNoteRequest(NoteStatus.IN_PROGRESS, 1L);
 
 		assertThatThrownBy(() -> noteService.create(request, 10L))
 			.isInstanceOf(NoteAccessDeniedException.class);
@@ -97,7 +97,7 @@ class NoteServiceTest {
 		User admin = buildUser(UserRole.ADMIN, 1L);
 		when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
 
-        NoteCreateRequest request = createNoteRequest(NoteStatus.PUBLISHED, 1L);
+		NoteCreateRequest request = createNoteRequest(NoteStatus.PUBLISHED, 1L);
 
 		assertThatThrownBy(() -> noteService.create(request, 1L))
 			.isInstanceOf(NoteInvalidStatusException.class)
@@ -118,11 +118,11 @@ class NoteServiceTest {
 		Long creatorId = 99L;
 		NoteCreateRequest request = createNoteRequest(NoteStatus.IN_PROGRESS, creatorId);
 
-	Creator creator = Creator.builder()
-		.name("Creator")
-		.bio("Bio")
-		.jobTitle("Job")
-		.build();
+		Creator creator = Creator.builder()
+			.name("Creator")
+			.bio("Bio")
+			.jobTitle("Job")
+			.build();
 		ReflectionTestUtils.setField(creator, "id", creatorId);
 		when(creatorRepository.findById(creatorId)).thenReturn(Optional.of(creator));
 
@@ -156,7 +156,7 @@ class NoteServiceTest {
 			.build();
 		when(noteRepository.findById(5L)).thenReturn(Optional.of(note));
 
-        NoteUpdateRequest request = createNoteUpdateRequest(NoteStatus.IN_PROGRESS, 1L);
+		NoteUpdateRequest request = createNoteUpdateRequest(NoteStatus.IN_PROGRESS, 1L);
 
 		assertThatThrownBy(() -> noteService.update(5L, request))
 			.isInstanceOf(NoteInvalidStatusException.class)
@@ -171,13 +171,13 @@ class NoteServiceTest {
 			new NoteOverviewDto("overview", "overview body", "https://img.overview"),
 			new NoteRetrospectDto("retro", "retro body"),
 			List.of(
-			new NoteProcessDto((short)1, "process 1", "body 1", "https://img.process1"),
-			new NoteProcessDto((short)2, "process 2", "body 2", "https://img.process2")
-		),
-			new NoteQuestionDto("question?"),
+				new NoteProcessDto((short)1, "process 1", "body 1", "https://img.process1"),
+				new NoteProcessDto((short)2, "process 2", "body 2", "https://img.process2")
+			),
+			new NoteQuestionDto(null, "question?"),
 			creatorId,
 			new NoteExternalLinkDto("https://source")
-	);
+		);
 	}
 
 	private NoteUpdateRequest createNoteUpdateRequest(NoteStatus status, Long creatorId) {
@@ -188,13 +188,13 @@ class NoteServiceTest {
 			new NoteOverviewDto("overview", "overview body", "https://img.overview"),
 			new NoteRetrospectDto("retro", "retro body"),
 			List.of(
-			new NoteProcessDto((short)1, "process 1", "body 1", "https://img.process1"),
-			new NoteProcessDto((short)2, "process 2", "body 2", "https://img.process2")
-		),
-			new NoteQuestionDto("question?"),
+				new NoteProcessDto((short)1, "process 1", "body 1", "https://img.process1"),
+				new NoteProcessDto((short)2, "process 2", "body 2", "https://img.process2")
+			),
+			new NoteQuestionDto(null, "question?"),
 			creatorId,
 			new NoteExternalLinkDto("https://source")
-	);
+		);
 	}
 
 	private User buildUser(UserRole role, Long id) {

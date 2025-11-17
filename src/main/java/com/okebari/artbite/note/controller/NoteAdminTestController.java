@@ -59,63 +59,83 @@ public class NoteAdminTestController {
 			            <h2>노트 생성</h2>
 			            <form id="note-form">
 			                <div class="form-group">
-			                    <label for="note-status">상태</label>
+			                    <label for="note-status">상태 (*필수)</label>
 			                    <select id="note-status">
 			                        <option value="IN_PROGRESS">IN_PROGRESS (임시저장)</option>
 			                        <option value="COMPLETED">COMPLETED (작성완료)</option>
 			                    </select>
 			                </div>
 			                <div class="form-group">
-			                    <label for="note-tag">태그</label>
+			                    <label for="note-tag">태그 (선택 사항, 최대 60자)</label>
 			                    <input type="text" id="note-tag" value="테스트, 샘플">
 			                </div>
 			                <div class="form-group">
-			                    <label for="note-creator-id">제작자(Creator) ID</label>
-			                    <input type="number" id="note-creator-id" value="1">
+			                    <label for="note-creator-id">제작자(Creator) ID (*필수)</label>
+			                    <input type="number" id="note-creator-id" value="1" onblur="fetchCreatorInfo()">
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>커버 (Cover)</h4>
-			                    <div class="form-group"><input type="text" id="cover-title" placeholder="커버 제목" value="테스트 커버 제목"></div>
-			                    <div class="form-group"><input type="text" id="cover-teaser" placeholder="커버 티저" value="테스트 커버 티저입니다."></div>
-			                    <div class="form-group"><input type="text" id="creator-name" placeholder="제작자 이름 (선택 사항)" value="김작가"></div>
-			                    <div class="form-group"><input type="text" id="creator-job-title" placeholder="제작자 직무 (선택 사항)" value="디지털 아티스트"></div>
-			                    <div class="form-group"><label>커버 이미지 파일</label><input type="file" id="cover-image-file" accept="image/*"></div>
+			                    <div class="form-group"><label for="cover-title">커버 제목 (*필수, 최대 30자)</label><input type="text" id="cover-title" value="테스트 커버 제목"></div>
+			                    <div class="form-group"><label for="cover-teaser">커버 티저 (*필수, 최대 100자)</label><input type="text" id="cover-teaser" value="테스트 커버 티저입니다."></div>
+			                    <div class="form-group">
+			                        <label for="cover-category">카테고리 (선택 사항, 기본값: NONE)</label>
+			                        <select id="cover-category">
+			                            <option value="NONE">카테고리 없음</option>
+			                            <option value="MURAL">벽화</option>
+			                            <option value="EMOTICON">이모티콘</option>
+			                            <option value="GRAPHIC">그래픽</option>
+			                            <option value="PRODUCT">제품</option>
+			                            <option value="FASHION">패션</option>
+			                            <option value="THREE_D">3D</option>
+			                            <option value="BRANDING">브랜딩</option>
+			                            <option value="ILLUSTRATION">일러스트</option>
+			                            <option value="MEDIA_ART">미디어아트</option>
+			                            <option value="FURNITURE">가구</option>
+			                            <option value="THEATER_SIGN">극장 손간판</option>
+			                            <option value="LANDSCAPE">조경</option>
+			                            <option value="ALBUM_ARTWORK">음반 아트워크</option>
+			                            <option value="VISUAL_DIRECTING">비주얼 디렉팅</option>
+			                        </select>
+			                    </div>
+			                    <div class="form-group"><label for="creator-name">제작자 이름</label><input type="text" id="creator-name" readonly></div>
+			                    <div class="form-group"><label for="creator-job-title">제작자 직무</label><input type="text" id="creator-job-title" readonly></div>
+			                    <div class="form-group"><label>커버 이미지 파일 (*필수, 최대 500자 URL)</label><input type="file" id="cover-image-file" accept="image/*"></div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>개요 (Overview)</h4>
-			                    <div class="form-group"><input type="text" id="overview-title" placeholder="개요 섹션 제목" value="작업 개요"></div>
-			                    <div class="form-group"><textarea id="overview-body" placeholder="개요 본문">이 작업은 테스트를 위해 생성되었습니다.</textarea></div>
-			                    <div class="form-group"><label>개요 이미지 파일</label><input type="file" id="overview-image-file" accept="image/*"></div>
-			                </div>
-			
-			                <div class="note-form-section">
-			                    <h4>회고 (Retrospect)</h4>
-			                    <div class="form-group"><input type="text" id="retrospect-title" placeholder="회고 섹션 제목" value="작업 회고"></div>
-			                    <div class="form-group"><textarea id="retrospect-body" placeholder="회고 본문">이번 작업을 통해 많은 것을 배웠습니다.</textarea></div>
+			                    <div class="form-group"><label for="overview-title">개요 섹션 제목 (*필수, 최대 30자)</label><input type="text" id="overview-title" value="작업 개요"></div>
+			                    <div class="form-group"><label for="overview-body">개요 본문 (*필수, 최대 200자)</label><textarea id="overview-body">이 작업은 테스트를 위해 생성되었습니다.</textarea></div>
+			                    <div class="form-group"><label>개요 이미지 파일 (*필수, 최대 500자 URL)</label><input type="file" id="overview-image-file" accept="image/*"></div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>제작 과정 (Processes) - 2개 필수</h4>
 			                    <p>Process 1</p>
-			                    <div class="form-group"><input type="text" id="process1-title" placeholder="과정1 제목" value="1단계: 기획"></div>
-			                    <div class="form-group"><textarea id="process1-body" placeholder="과정1 본문">요구사항을 분석했습니다.</textarea></div>
-			                    <div class="form-group"><label>과정1 이미지 파일</label><input type="file" id="process1-image-file" accept="image/*"></div>
+			                    <div class="form-group"><label for="process1-title">과정1 제목 (*필수, 최대 30자)</label><input type="text" id="process1-title" value="1단계: 기획"></div>
+			                    <div class="form-group"><label for="process1-body">과정1 본문 (*필수, 최대 500자)</label><textarea id="process1-body">요구사항을 분석했습니다.</textarea></div>
+			                    <div class="form-group"><label>과정1 이미지 파일 (*필수, 최대 500자 URL)</label><input type="file" id="process1-image-file" accept="image/*"></div>
 			                    <p style="margin-top: 10px;">Process 2</p>
-			                    <div class="form-group"><input type="text" id="process2-title" placeholder="과정2 제목" value="2단계: 디자인"></div>
-			                    <div class="form-group"><textarea id="process2-body" placeholder="과정2 본문">디자인 시안을 제작했습니다.</textarea></div>
-			                    <div class="form-group"><label>과정2 이미지 파일</label><input type="file" id="process2-image-file" accept="image/*"></div>
+			                    <div class="form-group"><label for="process2-title">과정2 제목 (*필수, 최대 30자)</label><input type="text" id="process2-title" value="2단계: 디자인"></div>
+			                    <div class="form-group"><label for="process2-body">과정2 본문 (*필수, 최대 500자)</label><textarea id="process2-body">디자인 시안을 제작했습니다.</textarea></div>
+			                    <div class="form-group"><label>과정2 이미지 파일 (*필수, 최대 500자 URL)</label><input type="file" id="process2-image-file" accept="image/*"></div>
+			                </div>
+			
+			                <div class="note-form-section">
+			                    <h4>회고 (Retrospect)</h4>
+			                    <div class="form-group"><label for="retrospect-title">회고 섹션 제목 (*필수, 최대 30자)</label><input type="text" id="retrospect-title" value="작업 회고"></div>
+			                    <div class="form-group"><label for="retrospect-body">회고 본문 (*필수, 최대 200자)</label><textarea id="retrospect-body">이번 작업을 통해 많은 것을 배웠습니다.</textarea></div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>질문 (Question)</h4>
-			                    <div class="form-group"><input type="text" id="question-text" placeholder="질문 텍스트" value="이 작업에서 가장 어려웠던 점은 무엇인가요?"></div>
+			                    <div class="form-group"><label for="question-text">질문 텍스트 (선택 사항, 최대 100자)</label><input type="text" id="question-text" placeholder="이 작업에서 가장 어려웠던 점은 무엇인가요?"></div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>외부 링크 (External Link)</h4>
-			                    <div class="form-group"><input type="text" id="external-link" placeholder="https://example.com"></div>
+			                    <div class="form-group"><label for="external-link">외부 링크 URL (선택 사항, 최대 500자)</label><input type="text" id="external-link" placeholder="https://example.com"></div>
 			                </div>
 			
 			                <button type="button" onclick="createNote()">노트 등록</button>
@@ -203,6 +223,35 @@ public class NoteAdminTestController {
 			            }
 			        }
 			
+			        async function fetchCreatorInfo() {
+			            const creatorId = document.getElementById('note-creator-id').value.trim();
+			            const creatorNameInput = document.getElementById('creator-name');
+			            const creatorJobTitleInput = document.getElementById('creator-job-title');
+			
+			            if (!creatorId) {
+			                creatorNameInput.value = '';
+			                creatorJobTitleInput.value = '';
+			                return;
+			            }
+			
+			            try {
+			                const result = await apiCall(`/api/admin/creators/${creatorId}`, { method: 'GET', headers: getAuthHeader() });
+			                if (result.success && result.data) {
+			                    creatorNameInput.value = result.data.name || '';
+			                    creatorJobTitleInput.value = result.data.jobTitle || '';
+			                } else {
+			                    alert('제작자 정보를 찾을 수 없습니다: ' + (result.error ? result.error.message : '알 수 없는 오류'));
+			                    creatorNameInput.value = '';
+			                    creatorJobTitleInput.value = '';
+			                }
+			            } catch (error) {
+			                console.error('Error fetching creator info:', error);
+			                alert('제작자 정보 조회 중 오류 발생: ' + (error.message || '알 수 없는 오류'));
+			                creatorNameInput.value = '';
+			                creatorJobTitleInput.value = '';
+			            }
+			        }
+			
 			        async function createNote() {
 			            spinner.style.display = 'block';
 			            displayStatus({ message: "이미지 업로드 및 노트 등록을 시작합니다..." });
@@ -229,7 +278,8 @@ public class NoteAdminTestController {
 			                        teaser: document.getElementById('cover-teaser').value,
 			                        mainImageUrl: coverImageUrl,
 			                        creatorName: document.getElementById('creator-name').value,
-			                        creatorJobTitle: document.getElementById('creator-job-title').value
+			                        creatorJobTitle: document.getElementById('creator-job-title').value,
+			                        category: document.getElementById('cover-category').value
 			                    },
 			                    overview: {
 			                        sectionTitle: document.getElementById('overview-title').value,
@@ -272,7 +322,7 @@ public class NoteAdminTestController {
 			            } finally {
 			                spinner.style.display = 'none';
 			            }
-        			}
+			     			}
 			
 			        async function getNote() {
 			            const noteId = document.getElementById('note-id-get-delete').value.trim();

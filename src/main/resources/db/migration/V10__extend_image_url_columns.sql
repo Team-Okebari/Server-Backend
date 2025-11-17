@@ -9,3 +9,7 @@ ALTER TABLE note_process
 
 ALTER TABLE note_reminder_pot
     ALTER COLUMN payload_main_image_url TYPE VARCHAR(500);
+
+-- Alter notes_head table
+ALTER TABLE notes_head
+    ALTER COLUMN source_url TYPE VARCHAR(500);

@@ -73,7 +73,7 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 	/**
 	 * 특정 일자(KST 기준)의 게시 노트를 조회한다.
 	 */
-	Optional<Note> findFirstByStatusAndPublishedAtBetween(
+	Optional<Note> findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(
 		NoteStatus status,
 		LocalDateTime startInclusive,
 		LocalDateTime endExclusive

@@ -65,7 +65,7 @@ public class NoteService {
 	public NoteResponse get(Long noteId) {
 		Note note = noteRepository.findById(noteId)
 			.orElseThrow(() -> new NoteNotFoundException(noteId));
-		return noteMapper.toResponse(note);
+		return noteMapper.toResponse(note, null);
 	}
 
 	/**
@@ -109,7 +109,7 @@ public class NoteService {
 	 */
 	public Page<NoteResponse> list(Pageable pageable) {
 		return noteRepository.findAll(pageable)
-			.map(note -> noteMapper.toResponse(note));
+			.map(note -> noteMapper.toResponse(note, null));
 	}
 
 	/**

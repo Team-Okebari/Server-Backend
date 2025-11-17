@@ -10,9 +10,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.common.exception.NoteNotFoundException;
 import com.okebari.artbite.common.exception.UserNotFoundException;
 import com.okebari.artbite.domain.user.User;
@@ -21,9 +21,8 @@ import com.okebari.artbite.domain.user.UserRole;
 import com.okebari.artbite.note.domain.NoteAnswer;
 import com.okebari.artbite.note.domain.NoteQuestion;
 import com.okebari.artbite.note.dto.answer.NoteAnswerDto;
-import com.okebari.artbite.common.exception.NoteAccessDeniedException;
-import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.note.mapper.NoteMapper;
+import com.okebari.artbite.note.repository.NoteAnswerRepository;
 import com.okebari.artbite.note.repository.NoteQuestionRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +35,9 @@ class NoteAnswerServiceTest {
 	private UserRepository userRepository;
 
 	@Mock
+	private NoteAnswerRepository noteAnswerRepository; // Added
+
+	@Mock
 	private NoteMapper noteMapper;
 
 	@InjectMocks
@@ -44,104 +46,135 @@ class NoteAnswerServiceTest {
 	@Test
 	void createAnswerPersistsNewEntity() {
 		User user = buildUser(10L, UserRole.USER);
-		NoteQuestion question = buildQuestion(5L, null);
+		NoteQuestion question = buildQuestion(5L);
+		NoteAnswer newAnswer = NoteAnswer.builder().respondent(user).answerText("answer").build();
+		ReflectionTestUtils.setField(newAnswer, "id", 1L); // Set ID for the new answer
 
 		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
 		when(noteQuestionRepository.findById(5L)).thenReturn(Optional.of(question));
-		when(noteQuestionRepository.save(question)).thenReturn(question);
-		when(noteMapper.toAnswerDto(any())).thenReturn(new NoteAnswerDto(1L, 5L, 10L, "answer"));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(5L, 10L)).thenReturn(Optional.empty());
+		when(noteAnswerRepository.save(any(NoteAnswer.class))).thenReturn(newAnswer);
+		when(noteMapper.toAnswerDto(any(NoteAnswer.class))).thenReturn(new NoteAnswerDto(1L, 5L, 10L, "answer"));
 
 		NoteAnswerDto dto = noteAnswerService.createAnswer(5L, 10L, "answer");
 
 		assertThat(dto.answerText()).isEqualTo("answer");
-		verify(noteQuestionRepository).save(question);
+		verify(noteAnswerRepository).save(any(NoteAnswer.class));
 	}
 
 	@Test
 	void createAnswerFailsWhenAlreadyExists() {
 		User user = buildUser(10L, UserRole.USER);
-		NoteAnswer answer = NoteAnswer.builder()
-			.respondent(user)
-			.answerText("old")
-			.build();
-		NoteQuestion question = buildQuestion(5L, answer);
+		NoteAnswer existingAnswer = NoteAnswer.builder().respondent(user).answerText("old").build();
+		NoteQuestion question = buildQuestion(5L);
 
 		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
 		when(noteQuestionRepository.findById(5L)).thenReturn(Optional.of(question));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(5L, 10L)).thenReturn(Optional.of(existingAnswer));
 
 		assertThatThrownBy(() -> noteAnswerService.createAnswer(5L, 10L, "new"))
 			.isInstanceOf(NoteInvalidStatusException.class)
-			.hasMessageContaining("이미 등록된 답변");
-		verify(noteQuestionRepository, never()).save(any());
+			.hasMessageContaining("이미 등록된 답변이 있습니다");
+		verify(noteAnswerRepository, never()).save(any());
 	}
 
 	@Test
 	void updateAnswerModifiesExistingEntity() {
 		User user = buildUser(10L, UserRole.USER);
-		NoteAnswer answer = NoteAnswer.builder()
-			.respondent(user)
-			.answerText("old")
-			.build();
-		NoteQuestion question = buildQuestion(7L, answer);
+		NoteAnswer existingAnswer = NoteAnswer.builder().respondent(user).answerText("old").build();
+		NoteQuestion question = buildQuestion(7L);
 
 		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
 		when(noteQuestionRepository.findById(7L)).thenReturn(Optional.of(question));
-		when(noteQuestionRepository.save(question)).thenReturn(question);
-		when(noteMapper.toAnswerDto(question.getAnswer()))
-			.thenReturn(new NoteAnswerDto(2L, 7L, 10L, "updated"));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(7L, 10L)).thenReturn(Optional.of(existingAnswer));
+		when(noteAnswerRepository.save(any(NoteAnswer.class))).thenReturn(existingAnswer); // Return the updated answer
+		when(noteMapper.toAnswerDto(any(NoteAnswer.class))).thenReturn(new NoteAnswerDto(2L, 7L, 10L, "updated"));
 
 		NoteAnswerDto dto = noteAnswerService.updateAnswer(7L, 10L, "updated");
 
 		assertThat(dto.answerText()).isEqualTo("updated");
-		verify(noteQuestionRepository).save(question);
+		verify(noteAnswerRepository).save(existingAnswer);
+		assertThat(existingAnswer.getAnswerText()).isEqualTo("updated");
 	}
 
 	@Test
 	void updateAnswerFailsWhenMissing() {
 		User user = buildUser(10L, UserRole.USER);
-		NoteQuestion question = buildQuestion(7L, null);
+		NoteQuestion question = buildQuestion(7L);
 
 		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
 		when(noteQuestionRepository.findById(7L)).thenReturn(Optional.of(question));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(7L, 10L)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> noteAnswerService.updateAnswer(7L, 10L, "updated"))
 			.isInstanceOf(NoteInvalidStatusException.class)
 			.hasMessageContaining("등록된 답변이 없습니다");
+		verify(noteAnswerRepository, never()).save(any());
 	}
 
 	@Test
-	void deleteAnswerRemovesAssociation() {
+	void deleteAnswerRemovesEntity() {
 		User user = buildUser(10L, UserRole.USER);
-		NoteAnswer answer = NoteAnswer.builder()
-			.respondent(user)
-			.answerText("data")
-			.build();
-		NoteQuestion question = buildQuestion(8L, answer);
+		NoteAnswer existingAnswer = NoteAnswer.builder().respondent(user).answerText("data").build();
+		NoteQuestion question = buildQuestion(8L);
 
 		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
 		when(noteQuestionRepository.findById(8L)).thenReturn(Optional.of(question));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(8L, 10L)).thenReturn(Optional.of(existingAnswer));
+		doNothing().when(noteAnswerRepository).delete(existingAnswer);
 
 		noteAnswerService.deleteAnswer(8L, 10L);
 
-		verify(noteQuestionRepository).save(question);
-		assertThat(question.getAnswer()).isNull();
+		verify(noteAnswerRepository).delete(existingAnswer);
 	}
 
 	@Test
-	void deleteAnswerRejectsOtherRespondent() {
+	void deleteAnswerFailsWhenMissing() {
 		User user = buildUser(10L, UserRole.USER);
-		User other = buildUser(20L, UserRole.USER);
-		NoteAnswer answer = NoteAnswer.builder()
-			.respondent(other)
-			.answerText("data")
-			.build();
-		NoteQuestion question = buildQuestion(8L, answer);
+		NoteQuestion question = buildQuestion(8L);
 
 		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
 		when(noteQuestionRepository.findById(8L)).thenReturn(Optional.of(question));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(8L, 10L)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> noteAnswerService.deleteAnswer(8L, 10L))
-			.isInstanceOf(NoteAccessDeniedException.class);
+			.isInstanceOf(NoteInvalidStatusException.class)
+			.hasMessageContaining("삭제할 답변이 존재하지 않습니다");
+		verify(noteAnswerRepository, never()).delete(any());
+	}
+
+	@Test
+	void getAnswerReturnsExistingEntity() {
+		User user = buildUser(10L, UserRole.USER);
+		NoteAnswer existingAnswer = NoteAnswer.builder().respondent(user).answerText("data").build();
+		NoteQuestion question = buildQuestion(9L);
+		NoteAnswerDto expectedDto = new NoteAnswerDto(3L, 9L, 10L, "data");
+
+		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+		when(noteQuestionRepository.findById(9L)).thenReturn(Optional.of(question));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(9L, 10L)).thenReturn(Optional.of(existingAnswer));
+		when(noteMapper.toAnswerDto(any(NoteAnswer.class))).thenReturn(expectedDto);
+
+		NoteAnswerDto dto = noteAnswerService.getAnswer(9L, 10L);
+
+		assertThat(dto).isNotNull();
+		assertThat(dto.answerText()).isEqualTo(expectedDto.answerText());
+		assertThat(dto.questionId()).isEqualTo(expectedDto.questionId());
+		assertThat(dto.respondentId()).isEqualTo(expectedDto.respondentId());
+	}
+
+	@Test
+	void getAnswerReturnsNullWhenMissing() {
+		User user = buildUser(10L, UserRole.USER);
+		NoteQuestion question = buildQuestion(9L);
+
+		when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+		when(noteQuestionRepository.findById(9L)).thenReturn(Optional.of(question));
+		when(noteAnswerRepository.findByQuestionIdAndRespondentId(9L, 10L)).thenReturn(Optional.empty());
+
+		NoteAnswerDto dto = noteAnswerService.getAnswer(9L, 10L);
+
+		assertThat(dto).isNull();
 	}
 
 	@Test
@@ -176,14 +209,11 @@ class NoteAnswerServiceTest {
 		return user;
 	}
 
-	private NoteQuestion buildQuestion(Long id, NoteAnswer answer) {
+	private NoteQuestion buildQuestion(Long id) {
 		NoteQuestion question = NoteQuestion.builder()
 			.questionText("Q?")
 			.build();
 		setId(question, id);
-		if (answer != null) {
-			question.assignAnswer(answer);
-		}
 		return question;
 	}
 
