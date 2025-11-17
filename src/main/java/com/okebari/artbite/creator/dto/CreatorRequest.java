@@ -11,12 +11,12 @@ public record CreatorRequest(
 	@NotBlank @Size(max = 60) String name,
 	@Size(max = 100) String bio,
 	@Size(max = 60) String jobTitle,
-	@Size(max = 255) String profileImageUrl,
-	@Size(max = 255) String instagramUrl,
-	@Size(max = 255) String youtubeUrl,
-	@Size(max = 255) String behanceUrl,
-	@Size(max = 255) String xUrl,
-	@Size(max = 255) String blogUrl,
-	@Size(max = 255) String newsUrl
+	@Size(max = 500) String profileImageUrl,
+	@Size(max = 500) String instagramUrl,
+	@Size(max = 500) String youtubeUrl,
+	@Size(max = 500) String behanceUrl,
+	@Size(max = 500) String xUrl,
+	@Size(max = 500) String blogUrl,
+	@Size(max = 500) String newsUrl
 ) {
 }

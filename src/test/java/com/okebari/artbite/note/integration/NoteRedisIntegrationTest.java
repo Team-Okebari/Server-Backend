@@ -1,6 +1,6 @@
 package com.okebari.artbite.note.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.okebari.artbite.domain.user.User;
@@ -19,15 +21,19 @@ import com.okebari.artbite.note.domain.NoteStatus;
 import com.okebari.artbite.note.repository.NoteRepository;
 import com.okebari.artbite.note.scheduler.NoteStatusScheduler;
 
+import software.amazon.awssdk.services.s3.S3Client;
+
 /**
  * Docker 기반 PostgreSQL + Redis 컨테이너를 활용한 노트 도메인 통합 테스트 예시.
  */
 @SpringBootTest
 @Transactional
+@TestPropertySource(properties = "cloud.aws.s3.bucket=dummy-bucket")
 class NoteRedisIntegrationTest extends NoteContainerBaseTest {
 
-	private static final ZoneId KST = ZoneId.of("Asia/Seoul");
-
+	private static final ZoneId KST = ZoneId.of("Asia/Seoul"); // Re-added KST definition
+	@MockitoBean
+	private S3Client s3Client;
 	@Autowired
 	private NoteRepository noteRepository;
 

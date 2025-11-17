@@ -22,6 +22,11 @@ spring:
           naver:
             client-id: "test-naver-client-id"
             client-secret: "test-naver-client-secret"
+  cloud:
+    aws:
+      s3:
+        enabled: false
+        bucket: dummy-bucket
 
 oauth2:
   logout:

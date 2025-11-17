@@ -1,8 +1,8 @@
 package com.okebari.artbite.note.dto.note;
 
-import com.okebari.artbite.note.domain.NoteCategoryType;
-
 import jakarta.validation.constraints.NotBlank;
+
+import com.okebari.artbite.note.domain.NoteCategoryType;
 
 public record NoteCoverDto(
 	@NotBlank String title,

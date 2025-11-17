@@ -218,7 +218,12 @@ public class LoginTestController {
 			                <div class="action-buttons">
 			                    <button onclick="logout()">로그아웃</button>
 			                    <button onclick="reissue()">토큰 재발급</button>
-			                    <a href="/payment-test-page" class="button" style="background-color: #28a745; color: white;">결제 테스트 페이지로 이동</a>
+			                </div>
+			                <div class="action-buttons">
+			                    <a href="/payment-test-page" class="button" style="background-color: #28a745; color: white;">결제 테스트</a>
+			                    <a href="/creator-test-page" class="button" style="background-color: #ffc107; color: black;">작가 관리 테스트</a>
+			                    <a href="/note-admin-test-page" class="button" style="background-color: #fd7e14; color: white;">Note 관리자 테스트</a>
+			                    <a href="/note-user-test-page" class="button" style="background-color: #17a2b8; color: white;">Note 사용자 테스트</a>
 			                </div>
 			
 			                <div id="api-status">

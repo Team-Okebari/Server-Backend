@@ -20,6 +20,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -43,9 +44,15 @@ import com.okebari.artbite.payment.toss.dto.PayType;
 import com.okebari.artbite.payment.toss.dto.PaymentDto;
 import com.okebari.artbite.payment.toss.dto.PaymentSuccessDto;
 
+import software.amazon.awssdk.services.s3.S3Client;
+
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = "cloud.aws.s3.bucket=dummy-bucket")
 class MembershipControllerTest extends AbstractContainerBaseTest {
+
+	@MockitoBean
+	private S3Client s3Client;
 
 	@Autowired
 	private TransactionTemplate transactionTemplate;

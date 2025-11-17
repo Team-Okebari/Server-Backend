@@ -59,7 +59,7 @@ public class Note extends BaseTimeEntity {
 	private LocalDateTime archivedAt;
 
 	// REQ_106: Admin이 입력하는 외부 참고 링크(관련 자료/포트폴리오 URL)를 보관한다.
-	@Column(name = "source_url", length = 255)
+	@Column(name = "source_url", length = 500)
 	private String sourceUrl;
 
 	// 작가(Creator) FK. 동일 작가가 여러 노트를 가질 수 있으므로 N:1 관계로 둔다.

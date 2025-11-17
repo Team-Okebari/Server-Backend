@@ -1,5 +1,8 @@
 package com.okebari.artbite.note.domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
@@ -33,8 +37,8 @@ public class NoteQuestion {
 	@Column(name = "question_txt", nullable = false, length = 100)
 	private String questionText;
 
-	@OneToOne(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-	private NoteAnswer answer;
+	@OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+	private List<NoteAnswer> answers = new ArrayList<>();
 
 	@Builder
 	private NoteQuestion(String questionText) {
@@ -47,15 +51,5 @@ public class NoteQuestion {
 
 	public void update(String questionText) {
 		this.questionText = questionText;
-	}
-
-	public void assignAnswer(NoteAnswer answer) {
-		if (this.answer != null) {
-			this.answer.clearQuestion();
-		}
-		this.answer = answer;
-		if (answer != null) {
-			answer.bindQuestion(this);
-		}
 	}
 }

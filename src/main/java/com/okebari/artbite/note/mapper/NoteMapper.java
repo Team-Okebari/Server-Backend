@@ -71,15 +71,15 @@ public class NoteMapper {
 
 	// Note 엔티티를 단건 조회 응답 DTO로 변환한다.
 	// 질문·답변 등 하위 구성요소는 각각 전용 변환 메서드를 통해 조립한다.
-	public NoteResponse toResponse(Note note) {
-		return buildNoteResponse(note, false);
+	public NoteResponse toResponse(Note note, NoteAnswerDto userAnswer) {
+		return buildNoteResponse(note, false, userAnswer);
 	}
 
-	public NoteResponse toResponseWithCoverCategory(Note note) {
-		return buildNoteResponse(note, true);
+	public NoteResponse toResponseWithCoverCategory(Note note, NoteAnswerDto userAnswer) {
+		return buildNoteResponse(note, true, userAnswer);
 	}
 
-	private NoteResponse buildNoteResponse(Note note, boolean includeCategory) {
+	private NoteResponse buildNoteResponse(Note note, boolean includeCategory, NoteAnswerDto userAnswer) {
 		Creator creator = note.getCreator();
 		CreatorSummaryDto creatorSummary = creator != null ? creatorMapper.toSummary(creator) : null;
 		Long creatorId = creator != null ? creator.getId() : null;
@@ -101,7 +101,7 @@ public class NoteMapper {
 				.toList()
 				: List.of(),
 			toQuestionDto(note.getQuestion()),
-			toAnswerResponse(note.getQuestion() != null ? note.getQuestion().getAnswer() : null),
+			toAnswerResponse(userAnswer),
 			creatorId,
 			creatorJobTitle,
 			externalLink,
@@ -183,11 +183,11 @@ public class NoteMapper {
 	}
 
 	// NoteAnswer → 프론트 응답 DTO. answerText만 싣는다.
-	public NoteAnswerResponse toAnswerResponse(NoteAnswer answer) {
-		if (answer == null) {
+	public NoteAnswerResponse toAnswerResponse(NoteAnswerDto answerDto) {
+		if (answerDto == null) {
 			return null;
 		}
-		return new NoteAnswerResponse(answer.getAnswerText());
+		return new NoteAnswerResponse(answerDto.answerText());
 	}
 
 	// 표지 DTO → 엔티티 변환.
@@ -282,7 +282,7 @@ public class NoteMapper {
 		if (question == null) {
 			return null;
 		}
-		return new NoteQuestionDto(question.getQuestionText());
+		return new NoteQuestionDto(question.getId(), question.getQuestionText());
 	}
 
 	private NoteCoverResponse buildCoverResponse(Note note, boolean includeTeaser) {

@@ -26,6 +26,18 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT}
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+      s3:
+        bucket: ${AWS_S3_BUCKET}
+      region:
+        static: ${AWS_REGION}
+        auto: false
+      stack:
+        auto: false
 server:
   port: 8080
 jwt:
@@ -40,3 +52,17 @@ note:
     redis-ttl-hours: 24
     redis-batch-size: 5000
     alarm-channel: note-reminder-alert
+
+# AWS S3 Configuration
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+    region:
+      static: ${AWS_REGION}
+      auto: false
+    stack:
+      auto: false
