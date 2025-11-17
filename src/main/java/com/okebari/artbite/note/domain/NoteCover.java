@@ -2,6 +2,8 @@ package com.okebari.artbite.note.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -34,14 +36,19 @@ public class NoteCover {
 	@Column(nullable = false, length = 100)
 	private String teaser;
 
-	@Column(name = "main_image_url", nullable = false, length = 255)
+	@Column(name = "main_image_url", nullable = false, length = 500)
 	private String mainImageUrl;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "category", nullable = false, length = 30)
+	private NoteCategoryType category = NoteCategoryType.NONE;
+
 	@Builder
-	private NoteCover(String title, String teaser, String mainImageUrl) {
+	private NoteCover(String title, String teaser, String mainImageUrl, NoteCategoryType category) {
 		this.title = title;
 		this.teaser = teaser;
 		this.mainImageUrl = mainImageUrl;
+		this.category = category != null ? category : NoteCategoryType.NONE;
 	}
 
 	void bindNote(Note note) {

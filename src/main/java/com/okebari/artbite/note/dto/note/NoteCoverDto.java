@@ -1,5 +1,7 @@
 package com.okebari.artbite.note.dto.note;
 
+import com.okebari.artbite.note.domain.NoteCategoryType;
+
 import jakarta.validation.constraints.NotBlank;
 
 public record NoteCoverDto(
@@ -7,6 +9,7 @@ public record NoteCoverDto(
 	@NotBlank String teaser,
 	@NotBlank String mainImageUrl,
 	String creatorName,
-	String creatorJobTitle
+	String creatorJobTitle,
+	NoteCategoryType category
 ) {
 }

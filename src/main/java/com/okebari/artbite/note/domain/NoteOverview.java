@@ -34,7 +34,7 @@ public class NoteOverview {
 	@Column(nullable = false, length = 200)
 	private String bodyText;
 
-	@Column(nullable = false, length = 255)
+	@Column(nullable = false, length = 500)
 	private String imageUrl;
 
 	@Builder

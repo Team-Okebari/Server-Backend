@@ -44,7 +44,7 @@ public class NoteQueryService {
 	 */
 	public NotePreviewResponse getTodayPreview() {
 		Note note = findTodayPublishedNote();
-		return noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
+		return noteMapper.toPreviewWithCategory(note, OVERVIEW_PREVIEW_LIMIT);
 	}
 
 	/**
@@ -61,10 +61,10 @@ public class NoteQueryService {
 		Note note = findTodayPublishedNote();
 		boolean accessible = subscriptionService.isActiveSubscriber(userId);
 		if (!accessible) {
-			NotePreviewResponse preview = noteMapper.toPreview(note, OVERVIEW_PREVIEW_LIMIT);
+			NotePreviewResponse preview = noteMapper.toPreviewWithCategory(note, OVERVIEW_PREVIEW_LIMIT);
 			return new TodayPublishedResponse(false, null, preview);
 		}
-		return new TodayPublishedResponse(true, noteMapper.toResponse(note), null);
+		return new TodayPublishedResponse(true, noteMapper.toResponseWithCoverCategory(note), null);
 	}
 
 	/**

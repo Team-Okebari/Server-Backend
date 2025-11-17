@@ -52,13 +52,13 @@
 | # | API | 인증/역할 | 요청 파라미터 | 프론트 수신 필드 |
 |---|-----|-----------|---------------|------------------|
 | 2.1 | `GET /api/notes/published/today-cover` | 공개 | 없음 | `NoteCoverResponse { title, teaser, mainImageUrl, creatorName, creatorJobTitle, publishedDate }` |
-| 2.3 | `GET /api/notes/published/today-preview` | USER / ADMIN | 없음 | `NotePreviewResponse { id, cover { title, mainImageUrl, creatorName, creatorJobTitle, publishedDate }, overview { sectionTitle, bodyText(<=100자), imageUrl } }` |
-| 2.2 | `GET /api/notes/published/today-detail` | USER / ADMIN | 없음 | `TodayPublishedResponse { accessible, note? = NoteResponse 전체 필드, preview? = NotePreviewResponse 전체 필드 }` |
+| 2.3 | `GET /api/notes/published/today-preview` | USER / ADMIN | 없음 | `NotePreviewResponse { id, cover { title, mainImageUrl, creatorName, creatorJobTitle, publishedDate, categoryBadge? }, overview { sectionTitle, bodyText(<=100자), imageUrl } }` |
+| 2.2 | `GET /api/notes/published/today-detail` | USER / ADMIN | 없음 | `TodayPublishedResponse { accessible, note? = NoteResponse 전체 필드(cover.categoryBadge?), preview? = NotePreviewResponse 전체 필드(cover.categoryBadge?) }` |
 | 2.4 | `GET /api/notes/archived` | USER / ADMIN | `keyword`, `page`, `size` | `Page<ArchivedNoteSummaryResponse { id, tagText, title, mainImageUrl, creatorName, publishedDate }>` |
 | 2.5 | `GET /api/notes/archived/{noteId}` | USER / ADMIN | `noteId` | `ArchivedNoteViewResponse { accessible, note? = NoteResponse 전체 필드, preview? = NotePreviewResponse 전체 필드 }` |
 | 2.6 | `POST /api/notes/{noteId}/bookmark` | USER / ADMIN | `noteId` | `{ bookmarked: boolean }` |
 | 2.7 | `GET /api/notes/bookmarks?keyword` | USER / ADMIN | `keyword`(선택) | `BookmarkListItemResponse[] { noteId, title, mainImageUrl, creatorName, tagText }` |
-| 2.8 | `GET /api/notes/reminder/today` | USER / ADMIN | 없음 | `NoteReminderResponse { surfaceHint, noteId, title, mainImageUrl, sourceType, reminderDate, dismissed }` |
+| 2.8 | `GET /api/notes/reminder/today` | USER / ADMIN | 없음 | `NoteReminderResponse { surfaceHint, payload { noteId, title, mainImageUrl, sourceType, reminderDate, dismissed, ... } }` |
 | 2.9 | `POST /api/notes/reminder/dismiss` | USER / ADMIN | 없음 | 없음 (204) – 당일 배너 숨김 |
 | 3.1 | `POST /api/admin/notes` | ADMIN | `NoteCreateRequest` | `Long` (생성 ID) |
 | 3.2 | `PUT /api/admin/notes/{noteId}` | ADMIN | `noteId`, `NoteCreateRequest` | `NoteResponse` (필드 목록 아래 참고) |
@@ -132,25 +132,46 @@
 ### 리마인드 전용 API
 
 #### 1) `GET /api/notes/reminder/today`
-- **설명**: 하루 한 번 선정된 리마인드 노트를 노출할지 여부와 페이로드를 반환합니다.
+- **설명**: 하루 한 번 선정된 리마인드 노트를 노출할지 여부와 상태 정보를 반환합니다.
 - **인증**: USER/ADMIN
 - **응답** `NoteReminderResponse`
 
 | 필드 | 설명 |
 |------|------|
-| `surfaceHint` | `DEFERRED`(첫 접속), `BANNER`(배너 노출), `NONE`(노출 없음/숨김) |
-| `noteId` | 배너 CTA 클릭 시 `/notes/archived/{noteId}`로 이동하는 ID |
-| `title` | 노트 제목 (고정 멘트 아래에 노출) |
-| `mainImageUrl` | 썸네일 이미지 |
-| `sourceType` | `BOOKMARK` 또는 `ANSWER` (어떤 활동에서 선정되었는지) |
-| `reminderDate` | 이 페이로드가 유효한 날짜 |
-| `dismissed` | 당일 “오늘은 그만 보기” 여부 |
+| `surfaceHint` | `DEFERRED`(첫 요청, 배너 숨김), `BANNER`(배너 노출), `NONE`(노출 없음/이미 숨김) |
+| `payload.noteId` | 배너 CTA 클릭 시 `/notes/archived/{noteId}`로 이동하는 ID |
+| `payload.title` | 노트 제목 |
+| `payload.mainImageUrl` | 썸네일 이미지 |
+| `payload.sourceType` | `BOOKMARK` / `ANSWER` |
+| `payload.reminderDate` | 해당 페이로드의 유효 날짜 (`yyyy-MM-dd`) |
+| `payload.dismissed` | 당일 “오늘은 그만 보기” 여부 |
+| `payload.firstVisitAt?` | 첫 조회 시각(선택, 상태 추적용) |
+| `payload.bannerSeenAt?` | 실제 배너 노출 시각(선택) |
+
+```json
+{
+  "success": true,
+  "data": {
+    "surfaceHint": "BANNER",
+    "payload": {
+      "noteId": 95,
+      "title": "작년 작업 돌아보기",
+      "mainImageUrl": "https://cdn.example.com/reminder/95.jpg",
+      "sourceType": "BOOKMARK",
+      "reminderDate": "2025-11-05",
+      "dismissed": false
+    }
+  },
+  "error": null,
+  "timestamp": "2025-11-05T08:00:00"
+}
+```
 
 #### 2) `POST /api/notes/reminder/dismiss`
-- **설명**: 사용자가 “오늘은 그만 보기”를 선택하면 호출. 당일 배너를 숨기고 `dismissed=true`로 기록합니다.
+- **설명**: 사용자가 “오늘은 그만 보기”를 선택하면 호출. DB/Redis에 즉시 `dismissed=true`를 반영해 당일 배너를 숨깁니다.
 - **요청 바디**: 없음
 - **응답**: 204 No Content
-- **비고**: 자정이 되면 상태가 초기화되어 다음날 새 노트가 동일 흐름을 따릅니다.
+- **비고**: 자정을 기준으로 상태가 초기화되어 다음날 새 노트가 동일 흐름을 따릅니다.
 
 ---
 
@@ -292,7 +313,11 @@
         "mainImageUrl": "https://cdn.example.com/note/today_main.jpg",
         "creatorName": "어트바이트",
         "creatorJobTitle": "일러스트레이터",
-        "publishedDate": "2025-11-05"
+        "publishedDate": "2025-11-05",
+        "categoryBadge": {
+          "type": "ILLUSTRATION",
+          "label": "일러스트"
+        }
       },
       "overview": {
         "sectionTitle": "이번 작업을 시작한 이유",
@@ -363,7 +388,11 @@
         "mainImageUrl": "https://cdn.example.com/note/today_main.jpg",
         "creatorName": "어트바이트",
         "creatorJobTitle": "일러스트레이터",
-        "publishedDate": "2025-11-05"
+        "publishedDate": "2025-11-05",
+        "categoryBadge": {
+          "type": "ILLUSTRATION",
+          "label": "일러스트"
+        }
       },
       "overview": {
         "sectionTitle": "이번 작업을 시작한 이유",
@@ -379,6 +408,7 @@
 
 - `preview.cover.teaser`는 미리보기/상세 응답에서 null로 내려가며, 커버 전용 API(2.1)에서만 값이 존재합니다.
 - `preview.overview.bodyText`는 100자를 초과하면 `NoteMapper.toPreview`에서 잘라냅니다.
+- `preview.cover.categoryBadge`는 Admin이 설정한 카테고리를 Enum + 한글 라벨로 내려줍니다(없으면 null).
 - 에러 코드 없음 (구독자 여부 분기로 대체하므로 `NOTE_ACCESS_DENIED` 미사용).
 
 ### 2.3 오늘 노트 미리보기
@@ -392,14 +422,18 @@
   "success": true,
   "data": {
     "id": 101,
-    "cover": {
-      "title": "금일 노트 타이틀",
-      "teaser": null,
-      "mainImageUrl": "https://cdn.example.com/note/today_main.jpg",
-      "creatorName": "어트바이트",
-      "creatorJobTitle": "일러스트레이터",
-      "publishedDate": "2025-11-05"
-    },
+      "cover": {
+        "title": "금일 노트 타이틀",
+        "teaser": null,
+        "mainImageUrl": "https://cdn.example.com/note/today_main.jpg",
+        "creatorName": "어트바이트",
+        "creatorJobTitle": "일러스트레이터",
+        "publishedDate": "2025-11-05",
+        "categoryBadge": {
+          "type": "ILLUSTRATION",
+          "label": "일러스트"
+        }
+      },
     "overview": {
       "sectionTitle": "이번 작업을 시작한 이유",
       "bodyText": "이번 작업에서는 컬러 팔레트를 재구성했습니다...",
@@ -548,6 +582,7 @@
 | `cover.title` | O | `string` | 커버 타이틀. |
 | `cover.teaser` | O | `string` | 커버 소개 문구. |
 | `cover.mainImageUrl` | O | `string` | 커버 대표 이미지. 필수 URL. |
+| `cover.category` | X | `string` | 작품 카테고리. `MURAL`/`EMOTICON`/`GRAPHIC`/`PRODUCT`/`FASHION`/`THREE_D`/`BRANDING`/`ILLUSTRATION`/`MEDIA_ART`/`FURNITURE`/`THEATER_SIGN`/`LANDSCAPE`/`ALBUM_ARTWORK`/`VISUAL_DIRECTING`/`NONE` 중 택 1. |
 | `overview.sectionTitle` | O | `string` | 개요 섹션 제목. |
 | `overview.bodyText` | O | `string` | 개요 본문. |
 | `overview.imageUrl` | O | `string` | 개요 영역 이미지. |
@@ -561,6 +596,8 @@
 | `question.questionText` | O | `string` | ADMIN이 등록하는 질문. |
 | `creatorId` | O | `number` | 연결할 작가 ID. 애플리케이션 검증상 필수. |
 | `externalLink.sourceUrl` | X | `string` (≤255) | 참고용 외부 링크. |
+
+- `cover.category` 미지정 시 기본 `NONE`. Admin UI에서 선택하면 today-preview/detail 배지에 표시된다.
 
 - **샘플 요청**
 
