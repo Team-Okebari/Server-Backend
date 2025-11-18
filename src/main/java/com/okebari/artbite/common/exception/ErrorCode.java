@@ -15,6 +15,7 @@ public enum ErrorCode {
 	COMMON_FORBIDDEN(HttpStatus.FORBIDDEN, "C003", "접근 권한이 없습니다."),
 	COMMON_NOT_FOUND(HttpStatus.NOT_FOUND, "C004", "리소스를 찾을 수 없습니다."),
 	COMMON_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C005", "서버 내부 오류가 발생했습니다."),
+	FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "C006", "파일 업로드 용량을 초과했습니다."),
 
 	// Auth Errors
 	AUTH_EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "A001", "이미 가입된 이메일입니다."),
@@ -22,7 +23,6 @@ public enum ErrorCode {
 	AUTH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "A003", "토큰이 만료되었습니다."),
 	AUTH_INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A004", "유효하지 않은 토큰입니다."),
 	AUTH_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "A005", "사용자를 찾을 수 없습니다."),
-
 
 	// Note Errors
 	NOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "노트를 찾을 수 없습니다."),
