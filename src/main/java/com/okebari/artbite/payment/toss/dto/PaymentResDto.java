@@ -21,6 +21,9 @@ public class PaymentResDto {
 	private String successUrl; // 성공 시 리다이렉트 될 URL
 	private String failUrl; // 실패 시 리다이렉트 될 URL
 
+	private String frontendSuccessUrl; // 프론트엔드에서 요청한 성공 시 리다이렉트 될 URL
+	private String frontendFailUrl; // 프론트엔드에서 요청한 실패 시 리다이렉트 될 URL
+
 	private String failReason; // 실패 이유
 	private boolean cancelYN; // 취소 YN
 	private String cancelReason; // 취소 이유
