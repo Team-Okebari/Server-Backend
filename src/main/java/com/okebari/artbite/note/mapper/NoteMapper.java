@@ -113,6 +113,40 @@ public class NoteMapper {
 		);
 	}
 
+	public NoteResponse toResponseForAdmin(Note note) {
+		Creator creator = note.getCreator();
+		CreatorSummaryDto creatorSummary = creator != null ? creatorMapper.toSummary(creator) : null;
+		Long creatorId = creator != null ? creator.getId() : null;
+		String creatorJobTitle = creator != null ? creator.getJobTitle() : null;
+		NoteExternalLinkDto externalLink = note.getSourceUrl() != null
+			? new NoteExternalLinkDto(note.getSourceUrl())
+			: null;
+
+		return new NoteResponse(
+			note.getId(),
+			note.getStatus(),
+			note.getTagText(),
+			buildCoverResponse(note, true, true), // includeTeaser = true, includeCategory = true
+			toOverviewDto(note.getOverview()),
+			toRetrospectDto(note.getRetrospect()),
+			note.getProcesses() != null
+				? note.getProcesses().stream()
+				.map(this::toProcessDto)
+				.toList()
+				: List.of(),
+			toQuestionDto(note.getQuestion()),
+			null, // No user answer for admin
+			creatorId,
+			creatorJobTitle,
+			externalLink,
+			creatorSummary,
+			toDateOnly(note.getPublishedAt()),
+			note.getArchivedAt(),
+			note.getCreatedAt(),
+			note.getUpdatedAt()
+		);
+	}
+
 	// 무료 사용자 미리보기 용도로 커버/요약 텍스트만 추린다.
 	public NotePreviewResponse toPreview(Note note, int overviewLimit) {
 		return buildPreview(note, overviewLimit, false);
@@ -236,13 +270,20 @@ public class NoteMapper {
 			return List.of();
 		}
 		return dtos.stream()
-			.map(dto -> NoteProcess.builder()
-				.position(dto.position())
-				.sectionTitle(dto.sectionTitle())
-				.bodyText(dto.bodyText())
-				.imageUrl(dto.imageUrl())
-				.build())
+			.map(this::toProcess)
 			.toList();
+	}
+
+	public NoteProcess toProcess(NoteProcessDto dto) {
+		if (dto == null) {
+			return null;
+		}
+		return NoteProcess.builder()
+			.position(dto.position())
+			.sectionTitle(dto.sectionTitle())
+			.bodyText(dto.bodyText())
+			.imageUrl(dto.imageUrl())
+			.build();
 	}
 
 	// 질문 DTO → 질문 엔티티. 질문 텍스트만 세팅한다.
@@ -294,6 +335,15 @@ public class NoteMapper {
 		String creatorName = note.getCreator() != null ? note.getCreator().getName() : null;
 		String creatorJobTitle = note.getCreator() != null ? note.getCreator().getJobTitle() : null;
 		String teaser = cover != null && includeTeaser ? cover.getTeaser() : null;
+
+		CategoryBadgeResponse categoryBadge = null;
+		if (includeCategory) {
+			categoryBadge = toCategoryBadge(cover);
+			if (categoryBadge == null) { // If toCategoryBadge returned null (meaning cover was null), default to NONE
+				categoryBadge = new CategoryBadgeResponse(NoteCategoryType.NONE.name(), NoteCategoryType.NONE.getLabel());
+			}
+		}
+
 		return new NoteCoverResponse(
 			cover != null ? cover.getTitle() : null,
 			teaser,
@@ -301,17 +351,17 @@ public class NoteMapper {
 			creatorName,
 			creatorJobTitle,
 			toDateOnly(note.getPublishedAt()),
-			includeCategory ? toCategoryBadge(cover) : null
+			categoryBadge // Use the potentially defaulted categoryBadge
 		);
 	}
 
 	private CategoryBadgeResponse toCategoryBadge(NoteCover cover) {
-		if (cover == null || cover.getCategory() == null) {
-			return null;
+		if (cover == null) {
+			return null; // No cover, so no category badge
 		}
 		NoteCategoryType categoryType = cover.getCategory();
-		if (categoryType == NoteCategoryType.NONE) {
-			return null;
+		if (categoryType == null) {
+			categoryType = NoteCategoryType.NONE; // Default to NONE if category is null
 		}
 		return new CategoryBadgeResponse(categoryType.name(), categoryType.getLabel());
 	}

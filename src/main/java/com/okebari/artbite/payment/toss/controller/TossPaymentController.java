@@ -51,6 +51,14 @@ public class TossPaymentController {
 
 		Payment payment = tossPaymentService.requestTossPayment(paymentDto, customUserDetails.getUsername());
 
+		String finalSuccessUrl = (paymentDto.getYourSuccessUrl() != null && !paymentDto.getYourSuccessUrl().isBlank())
+			? paymentDto.getYourSuccessUrl()
+			: tossPaymentConfig.getSuccessUrl();
+
+		String finalFailUrl = (paymentDto.getYourFailUrl() != null && !paymentDto.getYourFailUrl().isBlank())
+			? paymentDto.getYourFailUrl()
+			: tossPaymentConfig.getFailUrl();
+
 		PaymentResDto paymentResDto = PaymentResDto.builder()
 			.payType(payment.getPayType().getDescription())
 			.amount(payment.getAmount())
@@ -58,8 +66,8 @@ public class TossPaymentController {
 			.orderId(payment.getOrderId())
 			.customerEmail(customUserDetails.getUsername())
 			.customerName(customUserDetails.getUser().getUsername())
-			.successUrl(tossPaymentConfig.getSuccessUrl())
-			.failUrl(tossPaymentConfig.getFailUrl())
+			.successUrl(finalSuccessUrl)
+			.failUrl(finalFailUrl)
 			.createdAt(payment.getCreatedAt().toString())
 			.build();
 
