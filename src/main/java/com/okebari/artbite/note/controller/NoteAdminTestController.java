@@ -76,17 +76,26 @@ public class NoteAdminTestController {
 			                </div>
 			                <div class="form-group">
 			                    <label for="note-tag">태그 (선택 사항, 최대 60자)</label>
-			                    <input type="text" id="note-tag" value="테스트, 샘플">
+			                    <input type="text" id="note-tag" maxlength="60" onkeyup="updateCharCount('note-tag', 'note-tag-count')">
+			                    <span id="note-tag-count">0/60</span>
 			                </div>
 			                <div class="form-group">
 			                    <label for="note-creator-id">제작자(Creator) ID (*필수)</label>
-			                    <input type="number" id="note-creator-id" value="1" onblur="fetchCreatorInfo()">
+			                    <input type="number" id="note-creator-id" onblur="fetchCreatorInfo()">
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>커버 (Cover)</h4>
-			                    <div class="form-group"><label for="cover-title">커버 제목 (*필수, 최대 30자)</label><input type="text" id="cover-title" value="테스트 커버 제목"></div>
-			                    <div class="form-group"><label for="cover-teaser">커버 티저 (*필수, 최대 100자)</label><input type="text" id="cover-teaser" value="테스트 커버 티저입니다."></div>
+			                    <div class="form-group">
+			                        <label for="cover-title">커버 제목 (*필수, 최대 50자)</label>
+			                        <input type="text" id="cover-title" maxlength="50" onkeyup="updateCharCount('cover-title', 'cover-title-count')">
+			                        <span id="cover-title-count">0/50</span>
+			                    </div>
+			                    <div class="form-group">
+			                        <label for="cover-teaser">커버 티저 (*필수, 최대 100자)</label>
+			                        <input type="text" id="cover-teaser" maxlength="100" onkeyup="updateCharCount('cover-teaser', 'cover-teaser-count')">
+			                        <span id="cover-teaser-count">0/100</span>
+			                    </div>
 			                    <div class="form-group">
 			                        <label for="cover-category">카테고리 (선택 사항, 기본값: NONE)</label>
 			                        <select id="cover-category">
@@ -114,37 +123,77 @@ public class NoteAdminTestController {
 			
 			                <div class="note-form-section">
 			                    <h4>개요 (Overview)</h4>
-			                    <div class="form-group"><label for="overview-title">개요 섹션 제목 (*필수, 최대 30자)</label><input type="text" id="overview-title" value="작업 개요"></div>
-			                    <div class="form-group"><label for="overview-body">개요 본문 (*필수, 최대 200자)</label><textarea id="overview-body">이 작업은 테스트를 위해 생성되었습니다.</textarea></div>
+			                    <div class="form-group">
+			                        <label for="overview-title">개요 섹션 제목 (*필수, 최대 30자)</label>
+			                        <input type="text" id="overview-title" maxlength="30" onkeyup="updateCharCount('overview-title', 'overview-title-count')">
+			                        <span id="overview-title-count">0/30</span>
+			                    </div>
+			                    <div class="form-group">
+			                        <label for="overview-body">개요 본문 (*필수, 최대 200자)</label>
+			                        <textarea id="overview-body" maxlength="200" onkeyup="updateCharCount('overview-body', 'overview-body-count')"></textarea>
+			                        <span id="overview-body-count">0/200</span>
+			                    </div>
 			                    <div class="form-group"><label>개요 이미지 파일 (수정 시에는 비워두면 기존 이미지 유지)</label><input type="file" id="overview-image-file" accept="image/*"></div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>제작 과정 (Processes) - 2개 필수</h4>
 			                    <p>Process 1</p>
-			                    <div class="form-group"><label for="process1-title">과정1 제목 (*필수, 최대 30자)</label><input type="text" id="process1-title" value="1단계: 기획"></div>
-			                    <div class="form-group"><label for="process1-body">과정1 본문 (*필수, 최대 500자)</label><textarea id="process1-body">요구사항을 분석했습니다.</textarea></div>
+			                    <div class="form-group">
+			                        <label for="process1-title">과정1 제목 (*필수, 최대 30자)</label>
+			                        <input type="text" id="process1-title" maxlength="30" onkeyup="updateCharCount('process1-title', 'process1-title-count')">
+			                        <span id="process1-title-count">0/30</span>
+			                    </div>
+			                    <div class="form-group">
+			                        <label for="process1-body">과정1 본문 (*필수, 최대 500자)</label>
+			                        <textarea id="process1-body" maxlength="500" onkeyup="updateCharCount('process1-body', 'process1-body-count')"></textarea>
+			                        <span id="process1-body-count">0/500</span>
+			                    </div>
 			                    <div class="form-group"><label>과정1 이미지 파일 (수정 시에는 비워두면 기존 이미지 유지)</label><input type="file" id="process1-image-file" accept="image/*"></div>
 			                    <p style="margin-top: 10px;">Process 2</p>
-			                    <div class="form-group"><label for="process2-title">과정2 제목 (*필수, 최대 30자)</label><input type="text" id="process2-title" value="2단계: 디자인"></div>
-			                    <div class="form-group"><label for="process2-body">과정2 본문 (*필수, 최대 500자)</label><textarea id="process2-body">디자인 시안을 제작했습니다.</textarea></div>
+			                    <div class="form-group">
+			                        <label for="process2-title">과정2 제목 (*필수, 최대 30자)</label>
+			                        <input type="text" id="process2-title" maxlength="30" onkeyup="updateCharCount('process2-title', 'process2-title-count')">
+			                        <span id="process2-title-count">0/30</span>
+			                    </div>
+			                    <div class="form-group">
+			                        <label for="process2-body">과정2 본문 (*필수, 최대 500자)</label>
+			                        <textarea id="process2-body" maxlength="500" onkeyup="updateCharCount('process2-body', 'process2-body-count')"></textarea>
+			                        <span id="process2-body-count">0/500</span>
+			                    </div>
 			                    <div class="form-group"><label>과정2 이미지 파일 (수정 시에는 비워두면 기존 이미지 유지)</label><input type="file" id="process2-image-file" accept="image/*"></div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>회고 (Retrospect)</h4>
-			                    <div class="form-group"><label for="retrospect-title">회고 섹션 제목 (*필수, 최대 30자)</label><input type="text" id="retrospect-title" value="작업 회고"></div>
-			                    <div class="form-group"><label for="retrospect-body">회고 본문 (*필수, 최대 200자)</label><textarea id="retrospect-body">이번 작업을 통해 많은 것을 배웠습니다.</textarea></div>
+			                    <div class="form-group">
+			                        <label for="retrospect-title">회고 섹션 제목 (*필수, 최대 30자)</label>
+			                        <input type="text" id="retrospect-title" maxlength="30" onkeyup="updateCharCount('retrospect-title', 'retrospect-title-count')">
+			                        <span id="retrospect-title-count">0/30</span>
+			                    </div>
+			                    <div class="form-group">
+			                        <label for="retrospect-body">회고 본문 (*필수, 최대 200자)</label>
+			                        <textarea id="retrospect-body" maxlength="200" onkeyup="updateCharCount('retrospect-body', 'retrospect-body-count')"></textarea>
+			                        <span id="retrospect-body-count">0/200</span>
+			                    </div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>질문 (Question)</h4>
-			                    <div class="form-group"><label for="question-text">질문 텍스트 (선택 사항, 최대 100자)</label><input type="text" id="question-text" placeholder="이 작업에서 가장 어려웠던 점은 무엇인가요?"></div>
+			                    <div class="form-group">
+			                        <label for="question-text">질문 텍스트 (선택 사항, 최대 100자)</label>
+			                        <input type="text" id="question-text" placeholder="이 작업에서 가장 어려웠던 점은 무엇인가요?" maxlength="100" onkeyup="updateCharCount('question-text', 'question-text-count')">
+			                        <span id="question-text-count">0/100</span>
+			                    </div>
 			                </div>
 			
 			                <div class="note-form-section">
 			                    <h4>외부 링크 (External Link)</h4>
-			                    <div class="form-group"><label for="external-link">외부 링크 URL (선택 사항, 최대 500자)</label><input type="text" id="external-link" placeholder="https://example.com"></div>
+			                    <div class="form-group">
+			                        <label for="external-link">외부 링크 URL (선택 사항, 최대 500자)</label>
+			                        <input type="text" id="external-link" placeholder="https://example.com" maxlength="500" onkeyup="updateCharCount('external-link', 'external-link-count')">
+			                        <span id="external-link-count">0/500</span>
+			                    </div>
 			                </div>
 			
 			                <button type="button" onclick="createNote()">노트 등록</button>
@@ -417,22 +466,31 @@ public class NoteAdminTestController {
 			                    fetchCreatorInfo(); // 제작자 정보 자동 로드
 			                }
 			
+			                document.getElementById('note-tag').value = note.tagText || '';
+			                updateCharCount('note-tag', 'note-tag-count');
+			
 			                if (note.cover) {
 			                    document.getElementById('cover-title').value = note.cover.title || '';
 			                    document.getElementById('cover-teaser').value = note.cover.teaser || '';
 			                    document.getElementById('cover-category').value = note.cover.category ? note.cover.category.type : 'NONE';
 			                    currentImageUrls['cover-image-file'] = note.cover.mainImageUrl || '';
+			                    updateCharCount('cover-title', 'cover-title-count');
+			                    updateCharCount('cover-teaser', 'cover-teaser-count');
 			                }
 			
 			                if (note.overview) {
 			                    document.getElementById('overview-title').value = note.overview.sectionTitle || '';
 			                    document.getElementById('overview-body').value = note.overview.bodyText || '';
 			                    currentImageUrls['overview-image-file'] = note.overview.imageUrl || '';
+			                    updateCharCount('overview-title', 'overview-title-count');
+			                    updateCharCount('overview-body', 'overview-body-count');
 			                }
 			
 			                if (note.retrospect) {
 			                    document.getElementById('retrospect-title').value = note.retrospect.sectionTitle || '';
 			                    document.getElementById('retrospect-body').value = note.retrospect.bodyText || '';
+			                    updateCharCount('retrospect-title', 'retrospect-title-count');
+			                    updateCharCount('retrospect-body', 'retrospect-body-count');
 			                }
 			
 			                // Processes
@@ -442,15 +500,19 @@ public class NoteAdminTestController {
 			                            document.getElementById(`process${i+1}-title`).value = p.sectionTitle || '';
 			                            document.getElementById(`process${i+1}-body`).value = p.bodyText || '';
 			                            currentImageUrls[`process${i+1}-image-file`] = p.imageUrl || '';
+			                            updateCharCount(`process${i+1}-title`, `process${i+1}-title-count`);
+			                            updateCharCount(`process${i+1}-body`, `process${i+1}-body-count`);
 			                        }
 			                    });
 			                }
 			
 			                // Question
 			                document.getElementById('question-text').value = note.question ? note.question.questionText : '';
+			                updateCharCount('question-text', 'question-text-count');
 			
 			                // External Link
 			                document.getElementById('external-link').value = note.externalLink ? note.externalLink.sourceUrl : '';
+			                updateCharCount('external-link', 'external-link-count');
 			
 			                alert('노트 데이터를 폼에 로드했습니다.');
 			            } else {
@@ -472,6 +534,33 @@ public class NoteAdminTestController {
 			            const result = await apiCall('/api/admin/notes?page=0&size=5', { method: 'GET', headers: getAuthHeader() });
 			            displayStatus(result);
 			        }
+			
+			        function updateCharCount(inputId, countSpanId) {
+			            const inputElement = document.getElementById(inputId);
+			            const countSpan = document.getElementById(countSpanId);
+			            if (inputElement && countSpan) {
+			                const currentLength = inputElement.value.length;
+			                const maxLength = inputElement.maxLength;
+			                countSpan.textContent = `${currentLength}/${maxLength}`;
+			            }
+			        }
+			
+			        // Initialize counters on page load
+			        document.addEventListener('DOMContentLoaded', () => {
+			            updateCharCount('note-tag', 'note-tag-count');
+			            updateCharCount('cover-title', 'cover-title-count');
+			            updateCharCount('cover-teaser', 'cover-teaser-count');
+			            updateCharCount('overview-title', 'overview-title-count');
+			            updateCharCount('overview-body', 'overview-body-count');
+			            updateCharCount('process1-title', 'process1-title-count');
+			            updateCharCount('process1-body', 'process1-body-count');
+			            updateCharCount('process2-title', 'process2-title-count');
+			            updateCharCount('process2-body', 'process2-body-count');
+			            updateCharCount('retrospect-title', 'retrospect-title-count');
+			            updateCharCount('retrospect-body', 'retrospect-body-count');
+			            updateCharCount('question-text', 'question-text-count');
+			            updateCharCount('external-link', 'external-link-count');
+			        });
 			    </script>
 			</body>
 			</html>

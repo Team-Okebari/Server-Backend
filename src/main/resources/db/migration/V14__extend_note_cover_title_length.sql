@@ -1,0 +1,2 @@
+ALTER TABLE note_cover
+ALTER COLUMN title TYPE VARCHAR(50);
