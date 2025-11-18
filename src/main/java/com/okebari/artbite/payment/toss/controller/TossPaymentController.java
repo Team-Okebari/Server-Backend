@@ -51,13 +51,24 @@ public class TossPaymentController {
 
 		Payment payment = tossPaymentService.requestTossPayment(paymentDto, customUserDetails.getUsername());
 
-		String finalSuccessUrl = (paymentDto.getYourSuccessUrl() != null && !paymentDto.getYourSuccessUrl().isBlank())
-			? paymentDto.getYourSuccessUrl()
-			: tossPaymentConfig.getSuccessUrl();
+		// 프론트엔드에서 요청한 최종 리다이렉션 URL (없으면 기본값 사용)
+		String finalFrontendSuccessUrl =
+			(paymentDto.getYourSuccessUrl() != null && !paymentDto.getYourSuccessUrl().isBlank())
+				? paymentDto.getYourSuccessUrl()
+				: tossPaymentConfig.getFrontendSuccessUrl(); // 백엔드 설정의 프론트엔드 성공 URL
 
-		String finalFailUrl = (paymentDto.getYourFailUrl() != null && !paymentDto.getYourFailUrl().isBlank())
+		String finalFrontendFailUrl = (paymentDto.getYourFailUrl() != null && !paymentDto.getYourFailUrl().isBlank())
 			? paymentDto.getYourFailUrl()
-			: tossPaymentConfig.getFailUrl();
+			: tossPaymentConfig.getFrontendFailUrl(); // 백엔드 설정의 프론트엔드 실패 URL
+
+		// Toss Payments에 전달할 백엔드 콜백 URL 구성
+		// 여기에 프론트엔드의 최종 리다이렉션 URL을 쿼리 파라미터로 추가
+		String tossCallbackSuccessUrl =
+			tossPaymentConfig.getSuccessUrl() + "?frontendSuccessUrl=" + finalFrontendSuccessUrl + "&frontendFailUrl="
+				+ finalFrontendFailUrl;
+		String tossCallbackFailUrl =
+			tossPaymentConfig.getFailUrl() + "?frontendSuccessUrl=" + finalFrontendSuccessUrl + "&frontendFailUrl="
+				+ finalFrontendFailUrl;
 
 		PaymentResDto paymentResDto = PaymentResDto.builder()
 			.payType(payment.getPayType().getDescription())
@@ -66,8 +77,10 @@ public class TossPaymentController {
 			.orderId(payment.getOrderId())
 			.customerEmail(customUserDetails.getUsername())
 			.customerName(customUserDetails.getUser().getUsername())
-			.successUrl(finalSuccessUrl)
-			.failUrl(finalFailUrl)
+			.successUrl(tossCallbackSuccessUrl) // Toss Payments에 전달할 백엔드 콜백 URL
+			.failUrl(tossCallbackFailUrl)     // Toss Payments에 전달할 백엔드 콜백 URL
+			.frontendSuccessUrl(finalFrontendSuccessUrl) // 프론트엔드에서 요청한 최종 성공 URL
+			.frontendFailUrl(finalFrontendFailUrl)     // 프론트엔드에서 요청한 최종 실패 URL
 			.createdAt(payment.getCreatedAt().toString())
 			.build();
 
@@ -78,19 +91,21 @@ public class TossPaymentController {
 	public ModelAndView tossPaymentSuccess(
 		@RequestParam String paymentKey,
 		@RequestParam String orderId,
-		@RequestParam Long amount) {
+		@RequestParam Long amount,
+		@RequestParam String frontendSuccessUrl, // 추가
+		@RequestParam String frontendFailUrl) { // 추가
 		try {
 			PaymentSuccessDto paymentSuccessDto = tossPaymentService.confirmPayment(paymentKey, orderId, amount);
 			log.info("Toss Payments 결제 성공: paymentKey={}, orderId={}, amount={}, status={}",
 				paymentSuccessDto.getPaymentKey(), paymentSuccessDto.getOrderId(), paymentSuccessDto.getTotalAmount(),
 				paymentSuccessDto.getStatus());
 			// 결제 성공 시 프론트엔드의 성공 페이지로 리다이렉트
-			return new ModelAndView("redirect:" + tossPaymentConfig.getFrontendSuccessUrl()); // 프론트엔드 경로
+			return new ModelAndView("redirect:" + frontendSuccessUrl); // 프론트엔드 경로
 		} catch (Exception e) {
 			log.error("Toss Payments 결제 성공 처리 중 오류 발생: {}", e.getMessage(), e);
 			// 결제 실패 시 프론트엔드의 실패 페이지로 리다이렉트
 			ModelAndView modelAndView = new ModelAndView(
-				"redirect:" + tossPaymentConfig.getFrontendFailUrl()); // 프론트엔드 경로
+				"redirect:" + frontendFailUrl); // 프론트엔드 경로
 			modelAndView.addObject("message", e.getMessage());
 			return modelAndView;
 		}
@@ -100,12 +115,14 @@ public class TossPaymentController {
 	public ModelAndView tossPaymentFail(
 		@RequestParam String code,
 		@RequestParam String message,
-		@RequestParam String orderId) {
+		@RequestParam String orderId,
+		@RequestParam String frontendSuccessUrl, // 추가
+		@RequestParam String frontendFailUrl) { // 추가
 		log.error("Toss Payments 결제 실패: code={}, message={}, orderId={}", code, message, orderId);
 		tossPaymentService.failPayment(orderId, message); // DB에 실패 정보 저장
 
 		// 결제 실패 시 프론트엔드의 실패 페이지로 리다이렉트
-		ModelAndView modelAndView = new ModelAndView("redirect:" + tossPaymentConfig.getFrontendFailUrl()); // 프론트엔드 경로
+		ModelAndView modelAndView = new ModelAndView("redirect:" + frontendFailUrl); // 프론트엔드 경로
 		modelAndView.addObject("code", code);
 		modelAndView.addObject("message", message);
 		modelAndView.addObject("orderId", orderId);
