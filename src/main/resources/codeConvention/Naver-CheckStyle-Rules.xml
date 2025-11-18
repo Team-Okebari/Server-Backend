@@ -228,4 +228,9 @@
     <module name="BeforeExecutionExclusionFileFilter">
         <property name="fileNamePattern" value="CreatorTestController\.java$"/>
     </module>
+
+    <!-- Exclude MembershipInducementImageTestController.java -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="MembershipInducementImageTestController\.java$"/>
+    </module>
 </module>
