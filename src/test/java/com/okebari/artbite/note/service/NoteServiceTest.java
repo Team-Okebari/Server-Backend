@@ -101,7 +101,7 @@ class NoteServiceTest {
 
 		assertThatThrownBy(() -> noteService.create(request, 1L))
 			.isInstanceOf(NoteInvalidStatusException.class)
-			.hasMessageContaining("신규 노트는 IN_PROGRESS 또는 COMPLETED 상태로만 생성할 수 있습니다.");
+			.hasMessageContaining("신규 노트는 IN_PROGRESS, COMPLETED, ARCHIVED 상태로만 생성할 수 있습니다.");
 
 		verify(noteMapper, never()).toEntity(any());
 	}

@@ -10,6 +10,7 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.okebari.artbite.common.dto.CustomApiResponse;
 
@@ -70,6 +71,18 @@ public class GlobalExceptionHandler {
 			.status(HttpStatus.FORBIDDEN)
 			.headers(headers)
 			.body(CustomApiResponse.error(ErrorCode.COMMON_FORBIDDEN));
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<CustomApiResponse<?>> handleMaxUploadSizeExceededException(
+		MaxUploadSizeExceededException ex) {
+		log.error("MaxUploadSizeExceededException occurred: {}", ex.getMessage(), ex);
+		HttpHeaders headers = new HttpHeaders();
+		headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+		return ResponseEntity
+			.status(HttpStatus.BAD_REQUEST)
+			.headers(headers)
+			.body(CustomApiResponse.error(ErrorCode.FILE_SIZE_EXCEEDED));
 	}
 
 	// 모든 예상치 못한 예외 처리

@@ -68,6 +68,12 @@ public class NoteService {
 		return noteMapper.toResponse(note, null);
 	}
 
+	public NoteResponse getForAdmin(Long noteId) {
+		Note note = noteRepository.findById(noteId)
+			.orElseThrow(() -> new NoteNotFoundException(noteId));
+		return noteMapper.toResponseForAdmin(note);
+	}
+
 	/**
 	 * ADMIN이 노트를 수정한다.
 	 * - 게시/보관 상태에서는 수정이 불가하므로 상태 전환 규칙을 먼저 확인한다.
@@ -81,11 +87,36 @@ public class NoteService {
 
 		validateUpdatableState(note, request.status());
 		note.updateMeta(request.status(), request.tagText());
-		note.assignCover(noteMapper.toCover(request.cover()));
-		note.assignOverview(noteMapper.toOverview(request.overview()));
-		note.assignRetrospect(noteMapper.toRetrospect(request.retrospect()));
-		note.replaceProcesses(noteMapper.toProcesses(request.processes()));
-		note.assignQuestion(noteMapper.toQuestion(request.question()));
+
+		if (note.getCover() != null && request.cover() != null) {
+			note.getCover()
+				.update(request.cover().title(), request.cover().teaser(), request.cover().mainImageUrl(),
+					request.cover().category());
+		} else if (note.getCover() == null && request.cover() != null) {
+			note.assignCover(noteMapper.toCover(request.cover()));
+		}
+
+		if (note.getOverview() != null && request.overview() != null) {
+			note.getOverview()
+				.update(request.overview().sectionTitle(), request.overview().bodyText(),
+					request.overview().imageUrl());
+		} else if (note.getOverview() == null && request.overview() != null) {
+			note.assignOverview(noteMapper.toOverview(request.overview()));
+		}
+
+		if (note.getRetrospect() != null && request.retrospect() != null) {
+			note.getRetrospect().update(request.retrospect().sectionTitle(), request.retrospect().bodyText());
+		} else if (note.getRetrospect() == null && request.retrospect() != null) {
+			note.assignRetrospect(noteMapper.toRetrospect(request.retrospect()));
+		}
+
+		updateProcesses(note, request.processes());
+
+		if (note.getQuestion() != null && request.question() != null) {
+			note.getQuestion().update(request.question().questionText());
+		} else if (note.getQuestion() == null && request.question() != null) {
+			note.assignQuestion(noteMapper.toQuestion(request.question()));
+		}
 
 		note.updateExternalLinks(request.externalLink() != null ? request.externalLink().sourceUrl() : null);
 		note.assignCreator(resolveCreator(request.creatorId()));
@@ -125,8 +156,8 @@ public class NoteService {
 	 * 신규 생성 시 허용되는 초기 상태(IN_PROGRESS/COMPLETED)만 통과시킨다.
 	 */
 	private void validateInitialStatus(NoteStatus status) {
-		if (status != NoteStatus.IN_PROGRESS && status != NoteStatus.COMPLETED) {
-			throw new NoteInvalidStatusException("신규 노트는 IN_PROGRESS 또는 COMPLETED 상태로만 생성할 수 있습니다.");
+		if (status != NoteStatus.IN_PROGRESS && status != NoteStatus.COMPLETED && status != NoteStatus.ARCHIVED) {
+			throw new NoteInvalidStatusException("신규 노트는 IN_PROGRESS, COMPLETED, ARCHIVED 상태로만 생성할 수 있습니다.");
 		}
 	}
 
@@ -140,11 +171,40 @@ public class NoteService {
 		if (note.getStatus() == NoteStatus.PUBLISHED || note.getStatus() == NoteStatus.ARCHIVED) {
 			throw new NoteInvalidStatusException("PUBLISHED 또는 ARCHIVED 노트는 수정할 수 없습니다.");
 		}
-		if (targetStatus == NoteStatus.PUBLISHED || targetStatus == NoteStatus.ARCHIVED) {
-			throw new NoteInvalidStatusException("PUBLISHED/ARCHIVED 전환은 배치 작업에서만 처리됩니다.");
+		if (targetStatus == NoteStatus.PUBLISHED) {
+			throw new NoteInvalidStatusException("PUBLISHED 전환은 배치 작업에서만 처리됩니다.");
 		}
 		if (note.getStatus() == NoteStatus.COMPLETED && targetStatus == NoteStatus.COMPLETED) {
 			throw new NoteInvalidStatusException("COMPLETED 상태에서 수정하려면 먼저 IN_PROGRESS로 되돌려야 합니다.");
+		}
+	}
+
+	private void updateProcesses(Note note,
+		java.util.List<com.okebari.artbite.note.dto.note.NoteProcessDto> processDtos) {
+		if (processDtos == null) {
+			note.getProcesses().clear();
+			return;
+		}
+
+		java.util.Map<Short, com.okebari.artbite.note.domain.NoteProcess> existingProcesses = note.getProcesses()
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(p -> p.getId().getPosition(), p -> p));
+
+		java.util.List<com.okebari.artbite.note.domain.NoteProcess> toKeep = new java.util.ArrayList<>();
+
+		for (com.okebari.artbite.note.dto.note.NoteProcessDto dto : processDtos) {
+			com.okebari.artbite.note.domain.NoteProcess process = existingProcesses.get(dto.position());
+			if (process != null) {
+				process.update(dto.sectionTitle(), dto.bodyText(), dto.imageUrl());
+				toKeep.add(process);
+			} else {
+				com.okebari.artbite.note.domain.NoteProcess newProcess = noteMapper.toProcess(dto);
+				toKeep.add(newProcess);
+			}
+		}
+		note.getProcesses().clear();
+		for (com.okebari.artbite.note.domain.NoteProcess process : toKeep) {
+			note.addProcess(process);
 		}
 	}
 

@@ -54,7 +54,7 @@ public class NoteAdminController {
 	 */
 	@GetMapping("/{noteId}")
 	public CustomApiResponse<NoteResponse> get(@PathVariable Long noteId) {
-		return CustomApiResponse.success(noteService.get(noteId));
+		return CustomApiResponse.success(noteService.getForAdmin(noteId));
 	}
 
 	/**

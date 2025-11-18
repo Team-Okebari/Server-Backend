@@ -56,9 +56,10 @@ public class NoteCover {
 		this.id = note.getId();
 	}
 
-	public void update(String title, String teaser, String mainImageUrl) {
+	public void update(String title, String teaser, String mainImageUrl, NoteCategoryType category) {
 		this.title = title;
 		this.teaser = teaser;
 		this.mainImageUrl = mainImageUrl;
+		this.category = category != null ? category : NoteCategoryType.NONE;
 	}
 }
