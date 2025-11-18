@@ -161,7 +161,9 @@ class MembershipControllerTest extends AbstractContainerBaseTest {
 		mockMvc.perform(get("/api/payments/toss/success")
 				.param("paymentKey", paymentKey)
 				.param("orderId", orderId)
-				.param("amount", String.valueOf(amount)))
+				.param("amount", String.valueOf(amount))
+				.param("frontendSuccessUrl", tossPaymentConfig.getFrontendSuccessUrl()) // 추가
+				.param("frontendFailUrl", tossPaymentConfig.getFrontendFailUrl()))     // 추가
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl(tossPaymentConfig.getFrontendSuccessUrl())); // 성공 URL로 리다이렉트 검증
 
