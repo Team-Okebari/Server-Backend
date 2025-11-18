@@ -3,6 +3,10 @@ server:
 
 # Production Profile
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   jpa:
     hibernate:
       # 운영 환경에서는 스키마 검증을 사용합니다.
