@@ -3,6 +3,10 @@ server:
 
 # Development Profile (for Docker Compose)
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   jpa:
     hibernate:
       # 개발 환경에서는 스키마 자동 업데이트를 사용합니다.
