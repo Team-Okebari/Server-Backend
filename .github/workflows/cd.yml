@@ -16,21 +16,23 @@ jobs:
 
       - name: Prepare log directories
         run: |
-          echo "Creating Fluent Bit tail_db directory..."
+          echo "Creating Fluent Bit tail_db and app logs directories..."
+          # tail_db 초기화
           mkdir -p ./infra/fluent-bit/tail_db
+          sudo rm -rf ./infra/fluent-bit/tail_db/*   # 기존 DB 삭제
+          sudo chown -R $USER:$USER ./infra/fluent-bit/tail_db
           sudo chmod -R 777 ./infra/fluent-bit/tail_db
+
+          # 앱 로그 디렉터리
+          mkdir -p ./logs
+          sudo chown -R $USER:$USER ./logs
+          sudo chmod -R 777 ./logs
 
       # 2. 모든 배포 로직을 이 하나의 스텝에서 직접 실행합니다.
       - name: Build, Deploy, and Health Check
         run: |
           # 이 스크립트는 EC2 인스턴스에서 직접 실행됩니다.
           set -euo pipefail
-
-          # --- 로그 디렉토리 권한 문제 해결 ---
-          echo "Creating and setting permissions for log directory..."
-          mkdir -p ./logs
-          # 컨테이너의 사용자가 쓸 수 있도록 권한을 부여합니다.
-          sudo chmod -R 777 ./logs
 
           # === .env 파일 생성 시작 ===
           echo "Creating .env file from GitHub Secrets..."
