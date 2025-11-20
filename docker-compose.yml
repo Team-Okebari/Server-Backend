@@ -73,10 +73,12 @@ services:
       AWS_ROLE_ARN: ${AWS_ROLE_ARN}
 
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "24224"]
-      interval: 3s
-      timeout: 2s
-      retries: 10
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
 
     restart: unless-stopped
     networks:
