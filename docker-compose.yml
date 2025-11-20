@@ -61,6 +61,7 @@ services:
       - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
       - ./infra/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
       - ./logs:/app/logs
+      - ./infra/fluent-bit/tail_db:/fluent-bit/tail_db
     environment:
       OPENSEARCH_HOST: ${OPENSEARCH_HOST}
       AWS_REGION: ${AWS_REGION}
