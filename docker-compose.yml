@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: artbite-app
+    ports:
+      - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
@@ -39,7 +41,7 @@ services:
     logging:
       driver: "fluentd"
       options:
-        fluentd-address: 127.0.0.1:24224
+        fluentd-address: artbite-fluent-bit:24224
         tag: docker.artbite.app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
@@ -48,12 +50,16 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
-    network_mode: "host"
+    networks:
+      - artbite-net
 
   fluent-bit:
     image: fluent/fluent-bit:4.2.0
-    network_mode: "host"
     container_name: artbite-fluent-bit
+    ports:
+      - "24224:24224"
+    networks:
+      - artbite-net
     volumes:
       - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
       - ./infra/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
@@ -62,6 +68,10 @@ services:
       AWS_REGION: ${AWS_REGION}
       AWS_ROLE_ARN: ${AWS_ROLE_ARN}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 24224"]
+      interval: 5s
+      retries: 12
 
 networks:
   artbite-net:
