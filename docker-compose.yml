@@ -18,7 +18,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ACCESS_TOKEN_EXPIRE_TIME: ${JWT_ACCESS_TOKEN_EXPIRE_TIME}
       JWT_REFRESH_TOKEN_EXPIRE_TIME: ${JWT_REFRESH_TOKEN_EXPIRE_TIME}
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       CORS_URL: ${CORS_URL}
       TOSS_PAYMENTS_TEST_CLIENT_API_KEY: ${TOSS_PAYMENTS_TEST_CLIENT_API_KEY}
       TOSS_PAYMENTS_TEST_SECRET_API_KEY: ${TOSS_PAYMENTS_TEST_SECRET_API_KEY}
@@ -36,11 +36,11 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       AWS_REGION: ${AWS_REGION}
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - artbite-net
-      - elk-net # Add this line
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.artbite.app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 30s
@@ -48,12 +48,27 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - artbite-net
+
+  fluent-bit:
+    image: fluent/fluent-bit:1.9
+    container_name: artbite-fluent-bit
+    ports:
+      - "24224:24224"
+    volumes:
+      - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./infra/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
+    environment:
+      OPENSEARCH_HOST: ${OPENSEARCH_HOST}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_KEY}
+      AWS_ROLE_ARN: ${AWS_ROLE_ARN}
+    networks:
+      - artbite-net
+    restart: unless-stopped
 
 networks:
   artbite-net:
-    external: true
-  elk-net: # Add this network definition
-    external: true
-
-volumes:
-  esdata:
+    driver: bridge

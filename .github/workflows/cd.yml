@@ -38,14 +38,6 @@ jobs:
           SPRING_JPA_DATABASE_PLATFORM=${{ secrets.SPRING_JPA_DATABASE_PLATFORM }}
           SPRING_DATA_REDIS_HOST=${{ secrets.SPRING_DATA_REDIS_HOST }}
           SPRING_DATA_REDIS_PORT=${{ secrets.SPRING_DATA_REDIS_PORT }}
-          ELASTICSEARCH_VERSION=${{ secrets.ELASTICSEARCH_VERSION }}
-          ELASTICSEARCH_PORT=${{ secrets.ELASTICSEARCH_PORT }}
-          ELASTICSEARCH_HOST=${{ secrets.ELASTICSEARCH_HOST }}
-          LOGSTASH_BEATS_PORT=${{ secrets.LOGSTASH_BEATS_PORT }}
-          LOGSTASH_HTTP_PORT=${{ secrets.LOGSTASH_HTTP_PORT }}
-          LOGSTASH_VERSION=${{ secrets.LOGSTASH_VERSION }}
-          KIBANA_VERSION=${{ secrets.KIBANA_VERSION }}
-          KIBANA_PORT=${{ secrets.KIBANA_PORT }}
           JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
           JWT_ACCESS_TOKEN_EXPIRE_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_TIME }}
           JWT_REFRESH_TOKEN_EXPIRE_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRE_TIME }}
@@ -66,6 +58,8 @@ jobs:
           AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
           AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
           AWS_REGION=${{ secrets.AWS_REGION }}
+          OPENSEARCH_HOST=${{ secrets.OPENSEARCH_HOST }}
+          AWS_ROLE_ARN=${{ secrets.AWS_ROLE_ARN }}
           DOCKER_IMAGE=artbite-backend:${{ github.sha }}
           EOF
           # === .env 파일 생성 끝 ===
