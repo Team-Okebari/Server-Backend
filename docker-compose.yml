@@ -54,7 +54,7 @@ services:
       - artbite-net
 
   fluent-bit:
-    image: fluent/fluent-bit:2.3
+    image: fluent/fluent-bit:4.2.0
     network_mode: "host"
     container_name: artbite-fluent-bit
     volumes:
