@@ -41,7 +41,7 @@ services:
     logging:
       driver: "fluentd"
       options:
-        fluentd-address: 127.0.0.1:24224
+        fluentd-address: artbite-fluent-bit:24224
         tag: docker.artbite.app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
@@ -52,6 +52,8 @@ services:
     restart: unless-stopped
     networks:
       - artbite-net
+    volumes:
+      - ./logs:/app/logs
 
   fluent-bit:
     image: fluent/fluent-bit:4.2.0
@@ -63,6 +65,7 @@ services:
     volumes:
       - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
       - ./infra/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
+      - ./logs:/app/logs
     environment:
       OPENSEARCH_HOST: ${OPENSEARCH_HOST}
       AWS_REGION: ${AWS_REGION}
