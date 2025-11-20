@@ -6,7 +6,7 @@
     <!-- 1. 표준 JSON 콘솔 Appender (개발 환경용) -->
     <appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator"/>
+            <!-- <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator"/> -->
             <fieldNames>
                 <timestamp>timestamp</timestamp>
                 <version>[ignore]</version>
