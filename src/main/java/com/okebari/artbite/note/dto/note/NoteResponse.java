@@ -26,6 +26,7 @@ public record NoteResponse(
 	LocalDate publishedAt,
 	LocalDateTime archivedAt,
 	LocalDateTime createdAt,
-	LocalDateTime updatedAt
+	LocalDateTime updatedAt,
+	Boolean isBookmarked
 ) {
 }

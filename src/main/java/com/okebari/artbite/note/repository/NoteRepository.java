@@ -35,6 +35,11 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 	Page<Note> findAllArchived(Pageable pageable);
 
 	/**
+	 * 지정된 상태 목록에 포함된 모든 노트를 페이징하여 조회한다.
+	 */
+	Page<Note> findAllByStatusIn(List<NoteStatus> statuses, Pageable pageable);
+
+	/**
 	 * 지난 노트 검색. 제목/태그/작가명에 부분 일치하는 결과를 최신 아카이브 순으로 반환한다.
 	 */
 	@Query("""
@@ -50,6 +55,23 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 		order by n.archivedAt desc
 		""")
 	Page<Note> searchArchived(@Param("keyword") String keyword, Pageable pageable);
+
+	/**
+	 * 지정된 상태 목록 내에서 지난 노트를 검색한다. 제목/태그/작가명 기준.
+	 */
+	@Query("""
+		select n from Note n
+		left join n.cover c
+		left join n.creator cr
+		where n.status in :statuses
+		and (
+			lower(c.title) like lower(concat('%', :keyword, '%'))
+			or lower(n.tagText) like lower(concat('%', :keyword, '%'))
+			or lower(cr.name) like lower(concat('%', :keyword, '%'))
+		)
+		""")
+	Page<Note> searchByStatusIn(@Param("keyword") String keyword, @Param("statuses") List<NoteStatus> statuses,
+		Pageable pageable);
 
 	/**
 	 * 특정 상태의 노트를 전부 조회한다. 스케줄러에서 상태 전환 대상을 가져올 때 사용한다.

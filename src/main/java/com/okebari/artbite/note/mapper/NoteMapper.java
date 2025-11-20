@@ -70,16 +70,16 @@ public class NoteMapper {
 	}
 
 	// Note 엔티티를 단건 조회 응답 DTO로 변환한다.
-	// 질문·답변 등 하위 구성요소는 각각 전용 변환 메서드를 통해 조립한다.
 	public NoteResponse toResponse(Note note, NoteAnswerDto userAnswer) {
-		return buildNoteResponse(note, false, userAnswer);
+		return buildNoteResponse(note, false, userAnswer, false);
 	}
 
-	public NoteResponse toResponseWithCoverCategory(Note note, NoteAnswerDto userAnswer) {
-		return buildNoteResponse(note, true, userAnswer);
+	public NoteResponse toResponseWithCoverCategory(Note note, NoteAnswerDto userAnswer, Boolean isBookmarked) {
+		return buildNoteResponse(note, true, userAnswer, isBookmarked);
 	}
 
-	private NoteResponse buildNoteResponse(Note note, boolean includeCategory, NoteAnswerDto userAnswer) {
+	private NoteResponse buildNoteResponse(Note note, boolean includeCategory, NoteAnswerDto userAnswer,
+		Boolean isBookmarked) {
 		Creator creator = note.getCreator();
 		CreatorSummaryDto creatorSummary = creator != null ? creatorMapper.toSummary(creator) : null;
 		Long creatorId = creator != null ? creator.getId() : null;
@@ -109,7 +109,8 @@ public class NoteMapper {
 			toDateOnly(note.getPublishedAt()),
 			note.getArchivedAt(),
 			note.getCreatedAt(),
-			note.getUpdatedAt()
+			note.getUpdatedAt(),
+			isBookmarked
 		);
 	}
 
@@ -143,20 +144,22 @@ public class NoteMapper {
 			toDateOnly(note.getPublishedAt()),
 			note.getArchivedAt(),
 			note.getCreatedAt(),
-			note.getUpdatedAt()
+			note.getUpdatedAt(),
+			false // isBookmarked for admin
 		);
 	}
 
 	// 무료 사용자 미리보기 용도로 커버/요약 텍스트만 추린다.
 	public NotePreviewResponse toPreview(Note note, int overviewLimit) {
-		return buildPreview(note, overviewLimit, false);
+		return buildPreview(note, overviewLimit, false, false);
 	}
 
-	public NotePreviewResponse toPreviewWithCategory(Note note, int overviewLimit) {
-		return buildPreview(note, overviewLimit, true);
+	public NotePreviewResponse toPreviewWithCategory(Note note, int overviewLimit, Boolean isBookmarked) {
+		return buildPreview(note, overviewLimit, true, isBookmarked);
 	}
 
-	private NotePreviewResponse buildPreview(Note note, int overviewLimit, boolean includeCategory) {
+	private NotePreviewResponse buildPreview(Note note, int overviewLimit, boolean includeCategory,
+		Boolean isBookmarked) {
 		NoteOverviewDto overview = toOverviewDto(note.getOverview());
 		if (overview != null && overview.bodyText() != null && overview.bodyText().length() > overviewLimit) {
 			overview = new NoteOverviewDto(
@@ -169,7 +172,8 @@ public class NoteMapper {
 		return new NotePreviewResponse(
 			note.getId(),
 			buildCoverResponse(note, false, includeCategory),
-			overview
+			overview,
+			isBookmarked
 		);
 	}
 
@@ -340,7 +344,8 @@ public class NoteMapper {
 		if (includeCategory) {
 			categoryBadge = toCategoryBadge(cover);
 			if (categoryBadge == null) { // If toCategoryBadge returned null (meaning cover was null), default to NONE
-				categoryBadge = new CategoryBadgeResponse(NoteCategoryType.NONE.name(), NoteCategoryType.NONE.getLabel());
+				categoryBadge = new CategoryBadgeResponse(NoteCategoryType.NONE.name(),
+					NoteCategoryType.NONE.getLabel());
 			}
 		}
 
