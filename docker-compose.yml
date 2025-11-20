@@ -56,8 +56,6 @@ services:
   fluent-bit:
     image: fluent/fluent-bit:1.9
     container_name: artbite-fluent-bit
-    networks:
-      - artbite-net
     ports:
       - "24224:24224"
     volumes:
@@ -66,6 +64,8 @@ services:
     environment:
       OPENSEARCH_HOST: ${OPENSEARCH_HOST}
       AWS_REGION: ${AWS_REGION}
+    networks:
+      - artbite-net
     restart: unless-stopped
 
 networks:
