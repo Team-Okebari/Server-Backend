@@ -14,6 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Prepare log directories
+        run: |
+          echo "Creating Fluent Bit tail_db directory..."
+          mkdir -p ./infra/fluent-bit/tail_db
+          sudo chmod -R 777 ./infra/fluent-bit/tail_db
+
       # 2. 모든 배포 로직을 이 하나의 스텝에서 직접 실행합니다.
       - name: Build, Deploy, and Health Check
         run: |
