@@ -7,6 +7,7 @@ package com.okebari.artbite.note.dto.note;
 public record NotePreviewResponse(
 	Long id,
 	NoteCoverResponse cover,
-	NoteOverviewDto overview
+	NoteOverviewDto overview,
+	Boolean isBookmarked
 ) {
 }

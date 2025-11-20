@@ -2,6 +2,8 @@ package com.okebari.artbite.note.controller;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,7 +48,7 @@ public class NoteQueryController {
 	@GetMapping("/archived")
 	public CustomApiResponse<Page<ArchivedNoteSummaryResponse>> getArchivedNotes(
 		@RequestParam(value = "keyword", required = false) String keyword,
-		Pageable pageable) {
+		@PageableDefault(sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
 		return CustomApiResponse.success(noteQueryService.getArchivedNoteList(keyword, pageable));
 	}
 
@@ -67,8 +69,9 @@ public class NoteQueryController {
 	 */
 	@PreAuthorize("hasAnyRole('USER','ADMIN')")
 	@GetMapping("/published/today-preview")
-	public CustomApiResponse<NotePreviewResponse> getTodayPreview() {
-		return CustomApiResponse.success(noteQueryService.getTodayPreview());
+	public CustomApiResponse<NotePreviewResponse> getTodayPreview(
+		@AuthenticationPrincipal CustomUserDetails userDetails) {
+		return CustomApiResponse.success(noteQueryService.getTodayPreview(userDetails.getUser().getId()));
 	}
 
 	/**
