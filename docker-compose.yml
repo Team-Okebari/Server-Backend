@@ -36,12 +36,10 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       AWS_REGION: ${AWS_REGION}
-    depends_on:
-      - fluent-bit
     logging:
       driver: "fluentd"
       options:
-        fluentd-address: artbite-fluent-bit:24224
+        fluentd-address: 127.0.0.1:24224
         tag: docker.artbite.app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
@@ -56,16 +54,13 @@ services:
   fluent-bit:
     image: fluent/fluent-bit:1.9
     container_name: artbite-fluent-bit
-    ports:
-      - "24224:24224"
     volumes:
       - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
       - ./infra/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
     environment:
       OPENSEARCH_HOST: ${OPENSEARCH_HOST}
       AWS_REGION: ${AWS_REGION}
-    networks:
-      - artbite-net
+    network_mode: "host"
     restart: unless-stopped
 
 networks:
