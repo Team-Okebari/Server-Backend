@@ -57,8 +57,6 @@ services:
     image: fluent/fluent-bit:1.9
     network_mode: "host"
     container_name: artbite-fluent-bit
-    ports:
-      - "24224:24224"
     volumes:
       - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
       - ./infra/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
