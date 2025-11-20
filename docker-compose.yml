@@ -41,7 +41,7 @@ services:
     logging:
       driver: "fluentd"
       options:
-        fluentd-address: 127.0.0.1:24224
+        fluentd-address: fluent-bit:24224
         tag: docker.artbite.app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
