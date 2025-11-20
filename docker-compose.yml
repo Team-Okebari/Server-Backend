@@ -41,7 +41,7 @@ services:
     logging:
       driver: "fluentd"
       options:
-        fluentd-address: artbite-fluent-bit:24224
+        fluentd-address: 127.0.0.1:24224
         tag: docker.artbite.app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
@@ -50,14 +50,11 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
-    networks:
-      - artbite-net
+    network_mode: "host"
 
   fluent-bit:
     image: fluent/fluent-bit:4.2.0
-    network_mode: "bridge"
-    ports:
-      - "24224:24224"
+    network_mode: "host"
     container_name: artbite-fluent-bit
     volumes:
       - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
