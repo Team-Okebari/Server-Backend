@@ -36,8 +36,10 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       AWS_REGION: ${AWS_REGION}
+    depends_on:
+      - fluent-bit
     logging:
-      driver: fluentd
+      driver: "fluentd"
       options:
         fluentd-address: localhost:24224
         tag: docker.artbite.app
