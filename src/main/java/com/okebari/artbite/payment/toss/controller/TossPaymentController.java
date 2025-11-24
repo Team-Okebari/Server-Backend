@@ -22,7 +22,6 @@ import com.okebari.artbite.auth.vo.CustomUserDetails;
 import com.okebari.artbite.common.dto.CustomApiResponse;
 import com.okebari.artbite.domain.payment.Payment;
 import com.okebari.artbite.payment.toss.config.TossPaymentConfig;
-import com.okebari.artbite.payment.toss.dto.PaymentCancelDto;
 import com.okebari.artbite.payment.toss.dto.PaymentDto;
 import com.okebari.artbite.payment.toss.dto.PaymentHistoryDto;
 import com.okebari.artbite.payment.toss.dto.PaymentResDto;
@@ -129,20 +128,6 @@ public class TossPaymentController {
 		return modelAndView;
 	}
 
-	@PostMapping("/cancel")
-	public CustomApiResponse<PaymentSuccessDto> tossPaymentCancel(
-		@AuthenticationPrincipal CustomUserDetails customUserDetails,
-		@Valid @RequestBody PaymentCancelDto paymentCancelDto) {
-
-		PaymentSuccessDto cancelResponse = tossPaymentService.cancelPayment(
-			customUserDetails.getUsername(),
-			paymentCancelDto.getPaymentKey(),
-			paymentCancelDto.getCancelReason()
-		);
-
-		return CustomApiResponse.success(cancelResponse);
-	}
-
 	@GetMapping("/history")
 	public CustomApiResponse<SliceResponseDto<PaymentHistoryDto>> getChargingHistory(
 		@AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -155,6 +140,7 @@ public class TossPaymentController {
 		List<PaymentHistoryDto> paymentHistoryDtos = histories.getContent().stream()
 			.map(payment -> PaymentHistoryDto.builder()
 				.paymentHistoryId(payment.getId())
+				.paymentKey(payment.getPaymentKey())
 				.amount(payment.getAmount())
 				.orderName(payment.getOrderName())
 				.createdAt(payment.getCreatedAt())

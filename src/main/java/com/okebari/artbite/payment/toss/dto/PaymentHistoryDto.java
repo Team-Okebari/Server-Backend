@@ -17,6 +17,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class PaymentHistoryDto {
 	private Long paymentHistoryId;
+	private String paymentKey;
 	private Long amount;
 	private String orderName;
 	private PaymentStatus status;

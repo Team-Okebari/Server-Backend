@@ -10,8 +10,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.okebari.artbite.common.exception.BusinessException;
+import com.okebari.artbite.common.exception.ErrorCode;
 import com.okebari.artbite.common.exception.NoteInvalidStatusException;
 import com.okebari.artbite.common.exception.NoteNotFoundException;
+import com.okebari.artbite.domain.user.User;
+import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.note.domain.Note;
 import com.okebari.artbite.note.domain.NoteStatus;
 import com.okebari.artbite.note.dto.answer.NoteAnswerDto;
@@ -23,6 +27,7 @@ import com.okebari.artbite.note.dto.summary.ArchivedNoteSummaryResponse;
 import com.okebari.artbite.note.mapper.NoteMapper;
 import com.okebari.artbite.note.repository.NoteBookmarkRepository;
 import com.okebari.artbite.note.repository.NoteRepository;
+import com.okebari.artbite.tracking.service.ContentAccessLogService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,10 +43,12 @@ public class NoteQueryService {
 	private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
 	private final NoteRepository noteRepository;
+	private final UserRepository userRepository;
 	private final NoteBookmarkRepository noteBookmarkRepository;
 	private final NoteMapper noteMapper;
 	private final SubscriptionService subscriptionService;
 	private final NoteAnswerService noteAnswerService;
+	private final ContentAccessLogService contentAccessLogService;
 
 	/**
 	 * 로그인 사용자에게 제공하는 노트 미리보기.
@@ -72,6 +79,12 @@ public class NoteQueryService {
 			NotePreviewResponse preview = noteMapper.toPreviewWithCategory(note, OVERVIEW_PREVIEW_LIMIT, isBookmarked);
 			return new TodayPublishedResponse(false, null, preview);
 		}
+
+		// 유료 콘텐츠 접근 기록
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_USER_NOT_FOUND));
+		contentAccessLogService.logNoteAccess(user, note);
+
 		// Fetch user's answer if question exists
 		NoteAnswerDto userAnswer = null;
 		if (note.getQuestion() != null) {
@@ -108,6 +121,11 @@ public class NoteQueryService {
 		boolean subscribed = subscriptionService.isActiveSubscriber(userId);
 
 		if (subscribed) {
+			// 유료 콘텐츠 접근 기록
+			User user = userRepository.findById(userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_USER_NOT_FOUND));
+			contentAccessLogService.logNoteAccess(user, note);
+
 			NoteAnswerDto userAnswer = null;
 			if (note.getQuestion() != null) {
 				userAnswer = noteAnswerService.getAnswer(note.getQuestion().getId(), userId);
