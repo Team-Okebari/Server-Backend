@@ -15,6 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.okebari.artbite.common.exception.NoteNotFoundException;
+import com.okebari.artbite.domain.user.User;
+import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.note.domain.Note;
 import com.okebari.artbite.note.domain.NoteBookmark;
 import com.okebari.artbite.note.domain.NoteStatus;
@@ -27,6 +29,7 @@ import com.okebari.artbite.note.dto.note.TodayPublishedResponse;
 import com.okebari.artbite.note.mapper.NoteMapper;
 import com.okebari.artbite.note.repository.NoteBookmarkRepository;
 import com.okebari.artbite.note.repository.NoteRepository;
+import com.okebari.artbite.tracking.service.ContentAccessLogService;
 
 @ExtendWith(MockitoExtension.class)
 class NoteQueryServiceTest {
@@ -35,6 +38,8 @@ class NoteQueryServiceTest {
 	@Mock
 	private NoteRepository noteRepository;
 	@Mock
+	private UserRepository userRepository;
+	@Mock
 	private NoteBookmarkRepository noteBookmarkRepository;
 	@Mock
 	private NoteMapper noteMapper;
@@ -42,6 +47,8 @@ class NoteQueryServiceTest {
 	private SubscriptionService subscriptionService;
 	@Mock
 	private NoteAnswerService noteAnswerService;
+	@Mock
+	private ContentAccessLogService contentAccessLogService;
 	@InjectMocks
 	private NoteQueryService noteQueryService;
 
@@ -116,23 +123,30 @@ class NoteQueryServiceTest {
 
 	@Test
 	void getTodayPublishedDetailChecksSubscription() {
-		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
+		// Given
+		User testUser = mock(User.class);
 		Note note = Note.builder().status(NoteStatus.PUBLISHED).build();
 		ReflectionTestUtils.setField(note, "id", 1L);
+
+		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
 			.thenReturn(Optional.of(note));
+		when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 		when(noteBookmarkRepository.findByNoteIdAndUserId(note.getId(), 1L)).thenReturn(
 			Optional.of(mock(NoteBookmark.class)));
 		NoteResponse response = mock(NoteResponse.class);
 		when(noteMapper.toResponseWithCoverCategory(note, null, true)).thenReturn(response);
 
+		// When
 		TodayPublishedResponse result = noteQueryService.getTodayPublishedDetail(1L);
 
+		// Then
 		assertThat(result.accessible()).isTrue();
 		assertThat(result.note()).isEqualTo(response);
 		assertThat(result.preview()).isNull();
+		verify(contentAccessLogService, times(1)).logNoteAccess(testUser, note);
 	}
 
 	@Test
@@ -154,6 +168,7 @@ class NoteQueryServiceTest {
 		assertThat(result.accessible()).isFalse();
 		assertThat(result.note()).isNull();
 		assertThat(result.preview()).isEqualTo(preview);
+		verify(contentAccessLogService, never()).logNoteAccess(any(), any());
 	}
 
 	@Test
@@ -169,22 +184,28 @@ class NoteQueryServiceTest {
 
 	@Test
 	void getArchivedNoteViewReturnsDetailForSubscriber() {
+		// Given
+		User testUser = mock(User.class);
 		Note note = Note.builder()
 			.status(NoteStatus.PUBLISHED) // Check for PUBLISHED status
 			.build();
 		ReflectionTestUtils.setField(note, "id", 5L);
+
 		when(noteRepository.findById(5L)).thenReturn(Optional.of(note));
 		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
+		when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 		when(noteBookmarkRepository.findByNoteIdAndUserId(5L, 1L)).thenReturn(Optional.empty());
-
 		NoteResponse response = mock(NoteResponse.class);
 		when(noteMapper.toResponseWithCoverCategory(note, null, false)).thenReturn(response);
 
+		// When
 		ArchivedNoteViewResponse result = noteQueryService.getArchivedNoteView(5L, 1L);
 
+		// Then
 		assertThat(result.accessible()).isTrue();
 		assertThat(result.note()).isEqualTo(response);
 		assertThat(result.preview()).isNull();
+		verify(contentAccessLogService, times(1)).logNoteAccess(testUser, note);
 	}
 
 	@Test
@@ -206,5 +227,6 @@ class NoteQueryServiceTest {
 		assertThat(result.accessible()).isFalse();
 		assertThat(result.note()).isNull();
 		assertThat(result.preview()).isEqualTo(preview);
+		verify(contentAccessLogService, never()).logNoteAccess(any(), any());
 	}
 }

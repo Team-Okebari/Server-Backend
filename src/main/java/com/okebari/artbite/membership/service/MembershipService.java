@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,21 +16,26 @@ import com.okebari.artbite.domain.membership.Membership;
 import com.okebari.artbite.domain.membership.MembershipPlanType;
 import com.okebari.artbite.domain.membership.MembershipRepository;
 import com.okebari.artbite.domain.membership.MembershipStatus;
+import com.okebari.artbite.domain.payment.PaymentRepository;
+import com.okebari.artbite.domain.payment.PaymentStatus;
 import com.okebari.artbite.domain.user.User;
 import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.membership.dto.MembershipStatusResponseDto;
 import com.okebari.artbite.payment.toss.dto.PayType;
+import com.okebari.artbite.payment.toss.service.TossPaymentService;
+import com.okebari.artbite.tracking.service.ContentAccessLogService;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MembershipService {
 
 	private final MembershipRepository membershipRepository;
 	private final UserRepository userRepository;
+	private final PaymentRepository paymentRepository;
+	private final ContentAccessLogService contentAccessLogService;
+	private final TossPaymentService tossPaymentService;
 
 	@Value("${membership.default-plan-type}")
 	private String defaultPlanType;
@@ -38,6 +45,17 @@ public class MembershipService {
 
 	@Value("${membership.default-auto-renew}")
 	private boolean defaultAutoRenew;
+
+	@Autowired
+	public MembershipService(MembershipRepository membershipRepository, UserRepository userRepository,
+		PaymentRepository paymentRepository, ContentAccessLogService contentAccessLogService,
+		@Lazy TossPaymentService tossPaymentService) {
+		this.membershipRepository = membershipRepository;
+		this.userRepository = userRepository;
+		this.paymentRepository = paymentRepository;
+		this.contentAccessLogService = contentAccessLogService;
+		this.tossPaymentService = tossPaymentService;
+	}
 
 	@Transactional
 	public MembershipStatusResponseDto activateMembership(Long userId, Long amount, PayType payType) {
@@ -102,7 +120,35 @@ public class MembershipService {
 				MembershipStatus.ACTIVE)
 			.orElseThrow(() -> new BusinessException(ErrorCode.MEMBERSHIP_NOT_FOUND));
 
-		membership.cancel();
+		// 가장 최근의 성공한 결제 건을 찾음
+		Optional<com.okebari.artbite.domain.payment.Payment> lastPaymentOpt = paymentRepository.findTopByUserAndStatusOrderByCreatedAtDesc(
+			user, PaymentStatus.SUCCESS);
+
+		boolean isRefundable = false;
+		if (lastPaymentOpt.isPresent()) {
+			com.okebari.artbite.domain.payment.Payment lastPayment = lastPaymentOpt.get();
+			// 1. 7일 이내 결제 건인지 확인
+			boolean within7Days = lastPayment.getCreatedAt().isAfter(LocalDateTime.now().minusDays(7));
+			// 2. 콘텐츠 이용 내역이 없는지 확인
+			boolean contentNotAccessed = !contentAccessLogService.hasUserAccessedContentSince(user,
+				membership.getStartDate());
+
+			if (within7Days && contentNotAccessed) {
+				isRefundable = true;
+			}
+		}
+
+		if (isRefundable) {
+			// --- 청약철회(환불) 처리 ---
+			log.info("청약철회 조건을 만족하여 환불 및 멤버십 즉시 만료 처리를 시작합니다. userId: {}", userId);
+			tossPaymentService.executeRefund(lastPaymentOpt.get().getPaymentKey(), "7일 이내 청약철회");
+			membership.expire(); // 즉시 만료 처리
+		} else {
+			// --- 일반 구독 취소(자동 연장 해지) 처리 ---
+			log.info("일반 구독 취소(자동 연장 해지) 처리를 시작합니다. userId: {}", userId);
+			membership.cancel();
+		}
+
 		membershipRepository.save(membership);
 	}
 

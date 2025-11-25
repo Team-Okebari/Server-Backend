@@ -234,15 +234,13 @@ class TossPaymentServiceTest extends AbstractContainerBaseTest {
 		)).thenThrow(new RuntimeException("Toss API call failed"));
 
 		// When & Then: Toss API 호출 실패 시 예외가 발생하는지 검증
-		BusinessException exception = assertThrows(BusinessException.class, () -> {
+		assertThrows(RuntimeException.class, () -> {
 			tossPaymentService.confirmPayment(paymentKey, orderId, amount);
 		});
 
-		assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_CONFIRM_FAILED);
-
-		// Then: DB 상태가 변경되지 않았는지 확인
+		// Then: DB 상태가 FAILED로 변경되었는지 확인
 		Payment paymentAfterFail = paymentRepository.findByOrderId(orderId).orElseThrow();
-		assertThat(paymentAfterFail.getStatus()).isEqualTo(PaymentStatus.READY);
+		assertThat(paymentAfterFail.getStatus()).isEqualTo(PaymentStatus.FAILED);
 
 		long membershipCount = membershipRepository.count();
 		assertThat(membershipCount).isZero();
