@@ -5,15 +5,20 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.okebari.artbite.common.exception.NoteNotFoundException;
+import com.okebari.artbite.domain.user.User;
+import com.okebari.artbite.domain.user.UserRepository;
 import com.okebari.artbite.note.domain.Note;
+import com.okebari.artbite.note.domain.NoteBookmark;
 import com.okebari.artbite.note.domain.NoteStatus;
 import com.okebari.artbite.note.dto.note.ArchivedNoteViewResponse;
 import com.okebari.artbite.note.dto.note.NoteCoverResponse;
@@ -22,20 +27,28 @@ import com.okebari.artbite.note.dto.note.NotePreviewResponse;
 import com.okebari.artbite.note.dto.note.NoteResponse;
 import com.okebari.artbite.note.dto.note.TodayPublishedResponse;
 import com.okebari.artbite.note.mapper.NoteMapper;
+import com.okebari.artbite.note.repository.NoteBookmarkRepository;
 import com.okebari.artbite.note.repository.NoteRepository;
+import com.okebari.artbite.tracking.service.ContentAccessLogService;
 
 @ExtendWith(MockitoExtension.class)
 class NoteQueryServiceTest {
 
+	private static final Long TEST_USER_ID = 1L;
 	@Mock
 	private NoteRepository noteRepository;
-
+	@Mock
+	private UserRepository userRepository;
+	@Mock
+	private NoteBookmarkRepository noteBookmarkRepository;
 	@Mock
 	private NoteMapper noteMapper;
-
 	@Mock
 	private SubscriptionService subscriptionService;
-
+	@Mock
+	private NoteAnswerService noteAnswerService;
+	@Mock
+	private ContentAccessLogService contentAccessLogService;
 	@InjectMocks
 	private NoteQueryService noteQueryService;
 
@@ -44,16 +57,18 @@ class NoteQueryServiceTest {
 		Note note = Note.builder()
 			.status(NoteStatus.PUBLISHED)
 			.build();
+		ReflectionTestUtils.setField(note, "id", 1L);
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
-			.thenReturn(java.util.Optional.of(note));
+			.thenReturn(Optional.of(note));
+		when(noteBookmarkRepository.findByNoteIdAndUserId(note.getId(), TEST_USER_ID)).thenReturn(Optional.empty());
 
 		NoteOverviewDto overview = new NoteOverviewDto("섹션", "미리보기", null);
-		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview);
-		when(noteMapper.toPreviewWithCategory(note, 100)).thenReturn(preview);
+		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview, false);
+		when(noteMapper.toPreviewWithCategory(note, 100, false)).thenReturn(preview);
 
-		NotePreviewResponse result = noteQueryService.getTodayPreview();
+		NotePreviewResponse result = noteQueryService.getTodayPreview(TEST_USER_ID);
 
 		assertThat(result).isEqualTo(preview);
 	}
@@ -63,9 +78,9 @@ class NoteQueryServiceTest {
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
-			.thenReturn(java.util.Optional.empty());
+			.thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> noteQueryService.getTodayPreview())
+		assertThatThrownBy(() -> noteQueryService.getTodayPreview(TEST_USER_ID))
 			.isInstanceOf(NoteNotFoundException.class);
 	}
 
@@ -77,7 +92,7 @@ class NoteQueryServiceTest {
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
-			.thenReturn(java.util.Optional.of(note));
+			.thenReturn(Optional.of(note));
 
 		NoteCoverResponse cover = new NoteCoverResponse(
 			"title",
@@ -100,7 +115,7 @@ class NoteQueryServiceTest {
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
-			.thenReturn(java.util.Optional.empty());
+			.thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> noteQueryService.getTodayCover())
 			.isInstanceOf(NoteNotFoundException.class);
@@ -108,39 +123,52 @@ class NoteQueryServiceTest {
 
 	@Test
 	void getTodayPublishedDetailChecksSubscription() {
-		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
+		// Given
+		User testUser = mock(User.class);
 		Note note = Note.builder().status(NoteStatus.PUBLISHED).build();
+		ReflectionTestUtils.setField(note, "id", 1L);
+
+		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
-			.thenReturn(java.util.Optional.of(note));
+			.thenReturn(Optional.of(note));
+		when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+		when(noteBookmarkRepository.findByNoteIdAndUserId(note.getId(), 1L)).thenReturn(
+			Optional.of(mock(NoteBookmark.class)));
 		NoteResponse response = mock(NoteResponse.class);
-		when(noteMapper.toResponseWithCoverCategory(note, null)).thenReturn(response);
+		when(noteMapper.toResponseWithCoverCategory(note, null, true)).thenReturn(response);
 
+		// When
 		TodayPublishedResponse result = noteQueryService.getTodayPublishedDetail(1L);
 
+		// Then
 		assertThat(result.accessible()).isTrue();
 		assertThat(result.note()).isEqualTo(response);
 		assertThat(result.preview()).isNull();
+		verify(contentAccessLogService, times(1)).logNoteAccess(testUser, note);
 	}
 
 	@Test
 	void getTodayPublishedDetailReturnsPreviewForNonSubscriber() {
 		when(subscriptionService.isActiveSubscriber(2L)).thenReturn(false);
 		Note note = Note.builder().status(NoteStatus.PUBLISHED).build();
+		ReflectionTestUtils.setField(note, "id", 1L);
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
-			.thenReturn(java.util.Optional.of(note));
+			.thenReturn(Optional.of(note));
+		when(noteBookmarkRepository.findByNoteIdAndUserId(note.getId(), 2L)).thenReturn(Optional.empty());
 		NoteOverviewDto overview2 = new NoteOverviewDto("섹션", "preview", null);
-		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview2);
-		when(noteMapper.toPreviewWithCategory(note, 100)).thenReturn(preview);
+		NotePreviewResponse preview = new NotePreviewResponse(1L, null, overview2, false);
+		when(noteMapper.toPreviewWithCategory(note, 100, false)).thenReturn(preview);
 
 		TodayPublishedResponse result = noteQueryService.getTodayPublishedDetail(2L);
 
 		assertThat(result.accessible()).isFalse();
 		assertThat(result.note()).isNull();
 		assertThat(result.preview()).isEqualTo(preview);
+		verify(contentAccessLogService, never()).logNoteAccess(any(), any());
 	}
 
 	@Test
@@ -148,7 +176,7 @@ class NoteQueryServiceTest {
 		when(
 			noteRepository.findFirstByStatusAndPublishedAtBetweenOrderByPublishedAtDesc(eq(NoteStatus.PUBLISHED), any(),
 				any()))
-			.thenReturn(java.util.Optional.empty());
+			.thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> noteQueryService.getTodayPublishedDetail(1L))
 			.isInstanceOf(NoteNotFoundException.class);
@@ -156,19 +184,28 @@ class NoteQueryServiceTest {
 
 	@Test
 	void getArchivedNoteViewReturnsDetailForSubscriber() {
+		// Given
+		User testUser = mock(User.class);
 		Note note = Note.builder()
-			.status(NoteStatus.ARCHIVED)
+			.status(NoteStatus.PUBLISHED) // Check for PUBLISHED status
 			.build();
-		when(noteRepository.findById(5L)).thenReturn(java.util.Optional.of(note));
-		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
-		NoteResponse response = mock(NoteResponse.class);
-		when(noteMapper.toResponse(note, null)).thenReturn(response);
+		ReflectionTestUtils.setField(note, "id", 5L);
 
+		when(noteRepository.findById(5L)).thenReturn(Optional.of(note));
+		when(subscriptionService.isActiveSubscriber(1L)).thenReturn(true);
+		when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+		when(noteBookmarkRepository.findByNoteIdAndUserId(5L, 1L)).thenReturn(Optional.empty());
+		NoteResponse response = mock(NoteResponse.class);
+		when(noteMapper.toResponseWithCoverCategory(note, null, false)).thenReturn(response);
+
+		// When
 		ArchivedNoteViewResponse result = noteQueryService.getArchivedNoteView(5L, 1L);
 
+		// Then
 		assertThat(result.accessible()).isTrue();
 		assertThat(result.note()).isEqualTo(response);
 		assertThat(result.preview()).isNull();
+		verify(contentAccessLogService, times(1)).logNoteAccess(testUser, note);
 	}
 
 	@Test
@@ -176,16 +213,20 @@ class NoteQueryServiceTest {
 		Note note = Note.builder()
 			.status(NoteStatus.ARCHIVED)
 			.build();
-		when(noteRepository.findById(6L)).thenReturn(java.util.Optional.of(note));
+		ReflectionTestUtils.setField(note, "id", 6L);
+		when(noteRepository.findById(6L)).thenReturn(Optional.of(note));
 		when(subscriptionService.isActiveSubscriber(2L)).thenReturn(false);
+		when(noteBookmarkRepository.findByNoteIdAndUserId(6L, 2L)).thenReturn(
+			Optional.of(mock(NoteBookmark.class)));
 		NoteOverviewDto overview = new NoteOverviewDto("섹션", "archived preview", null);
-		NotePreviewResponse preview = new NotePreviewResponse(6L, null, overview);
-		when(noteMapper.toPreview(note, 100)).thenReturn(preview);
+		NotePreviewResponse preview = new NotePreviewResponse(6L, null, overview, true);
+		when(noteMapper.toPreviewWithCategory(note, 100, true)).thenReturn(preview);
 
 		ArchivedNoteViewResponse result = noteQueryService.getArchivedNoteView(6L, 2L);
 
 		assertThat(result.accessible()).isFalse();
 		assertThat(result.note()).isNull();
 		assertThat(result.preview()).isEqualTo(preview);
+		verify(contentAccessLogService, never()).logNoteAccess(any(), any());
 	}
 }

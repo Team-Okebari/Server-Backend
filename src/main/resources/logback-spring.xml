@@ -6,7 +6,7 @@
     <!-- 1. 표준 JSON 콘솔 Appender (개발 환경용) -->
     <appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator"/>
+            <!-- <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator"/> -->
             <fieldNames>
                 <timestamp>timestamp</timestamp>
                 <version>[ignore]</version>
@@ -108,23 +108,26 @@
 
     <!-- Spring Profile에 따른 설정 (예시: application-dev.yml, application-prod.yml) -->
     <springProfile name="prod">
+        <!-- For prod profile, send all logs to STDOUT in JSON format for Fluent Bit -->
         <root level="INFO">
-            <appender-ref ref="APP_FILE"/>
-            <appender-ref ref="SECURITY_FILE"/>
+            <appender-ref ref="STDOUT_JSON"/>
         </root>
 
-        <!-- 운영 환경에서는 보안 관련 로거의 상세도를 INFO로 조정 -->
+        <logger name="securityLogger" level="INFO" additivity="false">
+            <appender-ref ref="STDOUT_JSON"/>
+        </logger>
+
         <logger name="org.springframework.security" level="INFO" additivity="false">
-            <appender-ref ref="APP_FILE"/>
-            <appender-ref ref="SECURITY_FILE"/>
+            <appender-ref ref="STDOUT_JSON"/>
         </logger>
         <logger name="org.springframework.security.oauth2" level="INFO" additivity="false">
-            <appender-ref ref="APP_FILE"/>
-            <appender-ref ref="SECURITY_FILE"/>
+            <appender-ref ref="STDOUT_JSON"/>
         </logger>
         <logger name="com.okebari.artbite.auth.jwt" level="INFO" additivity="false">
-            <appender-ref ref="APP_FILE"/>
-            <appender-ref ref="SECURITY_FILE"/>
+            <appender-ref ref="STDOUT_JSON"/>
+        </logger>
+        <logger name="com.okebari.artbite.auth.service" level="INFO" additivity="false">
+            <appender-ref ref="STDOUT_JSON"/>
         </logger>
     </springProfile>
 </configuration>

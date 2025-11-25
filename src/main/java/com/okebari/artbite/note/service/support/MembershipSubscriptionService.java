@@ -2,6 +2,7 @@ package com.okebari.artbite.note.service.support;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -14,7 +15,7 @@ import com.okebari.artbite.note.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 멤버십 ACTIVE 상태 여부를 조회해 노트 접근 가능 여부를 결정하는 실제 구현체.
+ * 멤버십 ACTIVE 또는 CANCELED 상태 여부를 조회해 노트 접근 가능 여부를 결정하는 실제 구현체.
  */
 @Service
 @Profile("!stub")
@@ -36,8 +37,8 @@ public class MembershipSubscriptionService implements SubscriptionService {
 
 		return userRepository.findById(userId)
 			.flatMap(user ->
-				membershipRepository.findTopByUserAndStatusOrderByStartDateDesc(
-					user, MembershipStatus.ACTIVE))
+				membershipRepository.findTopByUserAndStatusInOrderByStartDateDesc(
+					user, List.of(MembershipStatus.ACTIVE, MembershipStatus.CANCELED)))
 			.filter(membership -> !membership.getEndDate().isBefore(now))
 			.isPresent();
 	}

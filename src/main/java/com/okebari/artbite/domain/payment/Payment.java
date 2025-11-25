@@ -70,6 +70,10 @@ public class Payment extends BaseTimeEntity {
 	private String cancelReason; // 취소 이유
 
 	// --- 비즈니스 로직 --- //
+	public void confirming() {
+		this.status = PaymentStatus.CONFIRMING;
+	}
+
 	public void success(String paymentKey) {
 		this.paymentKey = paymentKey;
 		this.status = PaymentStatus.SUCCESS;

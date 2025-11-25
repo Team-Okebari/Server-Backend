@@ -53,9 +53,9 @@ public class CreatorTestController {
 			        <div class="container">
 			            <h2>작가 등록</h2>
 			            <form id="creator-form">
-			                <div class="form-group"><label for="name">이름 (*필수, 최대 60자)</label><input type="text" id="name" value="새로운 작가"></div>
-			                <div class="form-group"><label for="bio">소개 (최대 100자)</label><input type="text" id="bio" value="안녕하세요. 새로운 작가입니다."></div>
-			                <div class="form-group"><label for="jobTitle">직무 (최대 60자)</label><input type="text" id="jobTitle" value="일러스트레이터"></div>
+			                <div class="form-group"><label for="name">이름 (*필수, 최대 60자)</label><input type="text" id="name"></div>
+			                <div class="form-group"><label for="bio">소개 (최대 100자)</label><input type="text" id="bio"></div>
+			                <div class="form-group"><label for="jobTitle">직무 (최대 60자)</label><input type="text" id="jobTitle"></div>
 			                <div class="form-group"><label for="profile-image-file">프로필 이미지 파일 (최대 500자 URL)</label><input type="file" id="profile-image-file" accept="image/*"></div>
 			                <div class="form-group"><label for="instagramUrl">인스타그램 URL (최대 500자)</label><input type="text" id="instagramUrl"></div>
 			                <div class="form-group"><label for="youtubeUrl">유튜브 URL (최대 500자)</label><input type="text" id="youtubeUrl"></div>

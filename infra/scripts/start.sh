@@ -48,21 +48,19 @@ for net in "${NETWORK_NAME}" "${ELK_NETWORK_NAME}"; do
   fi
 done
 
-# ── 4️⃣ ELK 스택 빌드 및 실행 ──
+# ── 4️⃣ 환경별 스택 실행 ──
 echo ""
-echo "=== Building and Starting ELK Stack ==="
-if [ -f "${ROOT_DIR}/.env" ]; then
-  $DOCKER_COMPOSE_CMD --project-directory "${INFRA_ELK_DIR}" -f "${ELK_COMPOSE_FILE}" up -d --build --quiet-pull
-fi
-
-# ── 5️⃣ 메인 앱 스택 실행 ──
-echo ""
-echo "=== Starting Main Application Stack ==="
 if [ "$ENV_TYPE" = "local" ]; then
-  # local: DB + App
+  # Local: DB, App, and ELK
+  echo "=== Building and Starting ELK Stack (for local env) ==="
+  $DOCKER_COMPOSE_CMD --project-directory "${INFRA_ELK_DIR}" -f "${ELK_COMPOSE_FILE}" up -d --build --quiet-pull
+
+  echo ""
+  echo "=== Starting Main Application Stack (for local env) ==="
   $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" up --build -d
 else
-  # prod: App만 (DB/Redis는 AWS 관리)
+  # prod: App + Fluent Bit only
+  echo "=== Starting Main Application Stack (for prod env) ==="
   $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${MAIN_COMPOSE_FILE}" up --build -d
 fi
 

@@ -36,46 +36,20 @@ fi
 
 cd "$ROOT_DIR" || exit 1
 
-# ── 3️⃣ ELK 등 부가 인프라 병렬 종료 ──
-COMPOSE_DIRS=("${INFRA_BASE_DIR}/elk")
-PIDS=()
-
-for d in "${COMPOSE_DIRS[@]}"; do
-  if [ -f "${d}/docker-compose.yml" ]; then
-    echo "=== Stopping services in ${d} ==="
-    pushd "${d}" >/dev/null
-    if [ -f "${ROOT_DIR}/.env" ]; then
-      $DOCKER_COMPOSE_CMD --env-file "${ROOT_DIR}/.env" down --timeout 10 &
-    else
-      $DOCKER_COMPOSE_CMD down --timeout 10 &
-    fi
-    PIDS+=($!)
-    popd >/dev/null
-  fi
-done
-
-for pid in "${PIDS[@]}"; do wait $pid; done
-echo "부가 인프라 스택이 병렬로 중지되었습니다."
-
-# ── 4️⃣ 메인 앱 스택 종료 ──
-echo ""
-echo "=== Stopping Main Application Stack ==="
-DOWN_OPTS="down"
+# ── 3️⃣ 환경별 스택 종료 ──
 if [ "$ENV_TYPE" = "local" ]; then
-  # local: DB + App
-  DOWN_OPTS="down --volume"
-  if [ -f "${ROOT_DIR}/.env" ]; then
-    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" ${DOWN_OPTS}
-  else
-    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" ${DOWN_OPTS}
-  fi
+  echo "=== Stopping ELK Stack (for local env) ==="
+  pushd "${INFRA_BASE_DIR}/elk" >/dev/null
+  $DOCKER_COMPOSE_CMD --env-file "${ROOT_DIR}/.env" down --timeout 10
+  popd >/dev/null
+
+  echo ""
+  echo "=== Stopping Main Application Stack (for local env) ==="
+  $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${DB_COMPOSE_FILE}" -f "${MAIN_COMPOSE_FILE}" down --volumes
 else
-  # prod: App만
-  if [ -f "${ROOT_DIR}/.env" ]; then
-    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${MAIN_COMPOSE_FILE}" down
-  else
-    $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" -f "${MAIN_COMPOSE_FILE}" down
-  fi
+  # prod: App + Fluent Bit only
+  echo "=== Stopping Main Application Stack (for prod env) ==="
+  $DOCKER_COMPOSE_CMD --project-name "${PROJECT_NAME}" --project-directory "${ROOT_DIR}" --env-file "${ROOT_DIR}/.env" -f "${MAIN_COMPOSE_FILE}" down
 fi
 
 # ── 5️⃣ 네트워크 삭제 ──

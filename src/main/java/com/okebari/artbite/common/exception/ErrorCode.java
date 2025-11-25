@@ -51,7 +51,12 @@ public enum ErrorCode {
 	PAYMENT_PENDING(HttpStatus.CONFLICT, "P006", "이미 결제 대기 중인 멤버십이 있습니다."),
 	PAYMENT_CONFIRM_FAILED(HttpStatus.BAD_REQUEST, "P007", "결제 승인에 실패했습니다."),
 	PAYMENT_ALREADY_PROCESSED(HttpStatus.CONFLICT, "P008", "이미 처리된 결제입니다."),
-	REFUND_TEMPORARILY_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "P009", "현재 환불 기능은 일시적으로 비활성화되어 있습니다. 관리자에게 문의해주세요.");
+	REFUND_TEMPORARILY_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "P009", "현재 환불 기능은 일시적으로 비활성화되어 있습니다. 관리자에게 문의해주세요."),
+	PAYMENT_CANCEL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "P010", "결제 취소에 실패했습니다."),
+	PAYMENT_CANNOT_BE_REFUNDED(HttpStatus.BAD_REQUEST, "P011", "환불이 불가능한 결제입니다."),
+	REFUND_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, "P012", "환불 요청 기간이 만료되었습니다."),
+	REFUND_CONTENT_ACCESSED(HttpStatus.CONFLICT, "P013", "유료 콘텐츠를 이미 이용하여 환불할 수 없습니다."),
+	PAYMENT_FETCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "P014", "Toss로부터 결제 정보를 조회하는 데 실패했습니다.");
 
 	private final HttpStatus httpStatus;
 	private final String code;

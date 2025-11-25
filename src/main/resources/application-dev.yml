@@ -3,6 +3,10 @@ server:
 
 # Development Profile (for Docker Compose)
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   jpa:
     hibernate:
       # 개발 환경에서는 스키마 자동 업데이트를 사용합니다.
@@ -16,7 +20,7 @@ spring:
 
 # 개발 환경에서는 인증/인가 경로 외에도 필요한 경로를 화이트리스트에 추가할 수 있습니다.
 security:
-  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /swagger-ui/**, /v3/api-docs/**, /swagger-resources/**, /webjars/**, /login-test-page, /payment-test-page, /api/payments/toss/success, /api/payments/toss/fail, /payment/fail, /payment/success, /api/config/payment, /api/notes/published/today-cover, /actuator/health, /note-admin-test-page, /note-user-test-page, /creator-test-page
+  whitelisted-paths: /api/auth/signup, /api/auth/login, /api/auth/reissue, /oauth2/**, /login/oauth2/code/**, /swagger-ui/**, /v3/api-docs/**, /swagger-resources/**, /webjars/**, /login-test-page, /payment-test-page, /api/payments/toss/success, /api/payments/toss/fail, /payment/fail, /payment/success, /api/config/payment, /api/notes/published/today-cover, /actuator/health, /note-admin-test-page, /note-user-test-page, /creator-test-page, /membership-inducement-image-test-page, /api/membership-inducement-image, /refund-test-page
 
 cors:
   allowed-origins: ${CORS_URL:-http://localhost:5173}
