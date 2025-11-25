@@ -82,6 +82,8 @@ artbite-Backend/
 │   ├── membership/   # 멤버십 및 구독 관리
 │   ├── note/         # 노트 콘텐츠 관리 (핵심 도메인)
 │   ├── payment/      # 결제 (Toss Payments 연동)
+│   ├── s3/           # 이미지 업로드
+│   ├── tracking/     # 유료 컨텐츠 이용 여부 트래킹
 │   ├── common/       # 공통 모듈 (예외 처리, 응답 DTO 등)
 │   └── config/       # 애플리케이션 전역 설정
 ├── src/main/resources/
