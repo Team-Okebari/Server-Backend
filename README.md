@@ -5,20 +5,11 @@
 > **디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 'Sparki'의 백엔드** 레포지토리입니다. </br>
 > Spring Boot, JPA, 다양한 클라우드 서비스를 기반으로 사용자 인증, 콘텐츠 관리, 구독 및 결제 API를 제공합니다.
 <img width="1920" height="1080" alt="1" src="https://github.com/user-attachments/assets/60f75e58-1df1-44ce-9a81-4b3c909a53df" />
-<img width="1920" height="1080" alt="29" src="https://github.com/user-attachments/assets/594e2d14-d2d5-4505-b4f8-3684f60a4848" />
-<img width="1920" height="1080" alt="27" src="https://github.com/user-attachments/assets/08778bcd-c552-48d8-b616-83dfffd2c3ce" />
-<img width="1920" height="1080" alt="30" src="https://github.com/user-attachments/assets/4d711107-0339-4c02-96d0-577405f2ff76" />
 <img width="1920" height="1080" alt="11" src="https://github.com/user-attachments/assets/1c2ecb58-7e70-4721-bf20-0025aeaae75e" />
 <img width="1920" height="1080" alt="12" src="https://github.com/user-attachments/assets/243cdfe6-71ac-44b6-bde5-b7c787002b14" />
 <img width="1920" height="1080" alt="13" src="https://github.com/user-attachments/assets/b0d53d89-b761-4bc1-a3cd-fd93760fad2b" />
 <img width="1920" height="1080" alt="14" src="https://github.com/user-attachments/assets/0a75766b-8bdd-4b55-a3d6-318109543b6a" />
 <img width="1920" height="1080" alt="15" src="https://github.com/user-attachments/assets/41d2e7cd-9826-4416-a2ef-49640fcdd79f" />
-<img width="1920" height="1080" alt="21" src="https://github.com/user-attachments/assets/c7b056e1-da0d-42b2-bf28-c2a1f2f7e278" />
-<img width="1920" height="1080" alt="22" src="https://github.com/user-attachments/assets/f34b2072-d8c9-4f27-b486-8ae6ddcc6ee9" />
-<img width="1920" height="1080" alt="23" src="https://github.com/user-attachments/assets/a37ceff2-fb56-4e83-8ce7-63342075fa06" />
-<img width="1920" height="1080" alt="24" src="https://github.com/user-attachments/assets/a3772eb7-b09f-4027-9cfb-e5ba8786a4d6" />
-<img width="1920" height="1080" alt="31" src="https://github.com/user-attachments/assets/e8edd416-e4a6-4994-b7fe-ab87ebf32170" />
-<img width="1920" height="1080" alt="32" src="https://github.com/user-attachments/assets/5a0492d4-fd4e-485c-84db-e5c8f063127a" />
 
 </br>
 
@@ -33,6 +24,9 @@
 - **사용자 참여 기능**: 노트에 대한 질문/답변, 북마크, 개인화된 리마인더(알림) 기능.
 - **파일 스토리지**: AWS S3를 활용한 이미지 파일 관리.
 - **로깅 및 모니터링**: ELK 스택(개발) 및 AWS OpenSearch(운영)를 활용한 중앙화된 로깅 시스템.
+
+
+<img width="1920" height="1080" alt="30" src="https://github.com/user-attachments/assets/4d711107-0339-4c02-96d0-577405f2ff76" />
 
 </br>
 
@@ -82,6 +76,8 @@
 - JUnit 5 & Mockito
 - Checkstyle (Naver)
 - SpringDoc (Swagger UI)
+   
+<img width="1920" height="1080" alt="29" src="https://github.com/user-attachments/assets/594e2d14-d2d5-4505-b4f8-3684f60a4848" />
 
 </br>
 
@@ -231,3 +227,15 @@ Artbite 백엔드는 견고한 테스트 전략을 통해 코드 품질과 안�
   연동을 포함한 실제 환경과 유사한 조건에서 컴포넌트 간의 상호 작용을 검증합니다. (예: `AuthIntegrationTest`, `NoteRedisIntegrationTest`)
 - **개발자 도구**: 개발 편의성을 위해 HTML 기반의 테스트 페이지들을 제공하여 주요 API 엔드포인트(인증, 작가 관리, 노트 관리 등)를 웹 인터페이스에서 쉽게 수동으로 테스트하고 디버깅할 수 있도록
   합니다. (예: `/login-test-page`, `/note-admin-test-page`)
+
+## 8. UT
+
+<img width="1920" height="1080" alt="21" src="https://github.com/user-attachments/assets/c7b056e1-da0d-42b2-bf28-c2a1f2f7e278" />
+<img width="1920" height="1080" alt="22" src="https://github.com/user-attachments/assets/f34b2072-d8c9-4f27-b486-8ae6ddcc6ee9" />
+<img width="1920" height="1080" alt="23" src="https://github.com/user-attachments/assets/a37ceff2-fb56-4e83-8ce7-63342075fa06" />
+<img width="1920" height="1080" alt="24" src="https://github.com/user-attachments/assets/a3772eb7-b09f-4027-9cfb-e5ba8786a4d6" />
+
+## 9. 회고
+
+<img width="1920" height="1080" alt="31" src="https://github.com/user-attachments/assets/e8edd416-e4a6-4994-b7fe-ab87ebf32170" />
+<img width="1920" height="1080" alt="32" src="https://github.com/user-attachments/assets/5a0492d4-fd4e-485c-84db-e5c8f063127a" />
