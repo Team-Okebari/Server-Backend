@@ -229,12 +229,16 @@ Artbite 백엔드는 견고한 테스트 전략을 통해 코드 품질과 안�
 - **개발자 도구**: 개발 편의성을 위해 HTML 기반의 테스트 페이지들을 제공하여 주요 API 엔드포인트(인증, 작가 관리, 노트 관리 등)를 웹 인터페이스에서 쉽게 수동으로 테스트하고 디버깅할 수 있도록
   합니다. (예: `/login-test-page`, `/note-admin-test-page`)
 
+</br>
+
 ## 8. UT
 
 <img width="1920" height="1080" alt="21" src="https://github.com/user-attachments/assets/c7b056e1-da0d-42b2-bf28-c2a1f2f7e278" />
 <img width="1920" height="1080" alt="22" src="https://github.com/user-attachments/assets/f34b2072-d8c9-4f27-b486-8ae6ddcc6ee9" />
 <img width="1920" height="1080" alt="23" src="https://github.com/user-attachments/assets/a37ceff2-fb56-4e83-8ce7-63342075fa06" />
 <img width="1920" height="1080" alt="24" src="https://github.com/user-attachments/assets/a3772eb7-b09f-4027-9cfb-e5ba8786a4d6" />
+
+</br>
 
 ## 9. 회고
 
