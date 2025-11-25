@@ -1,6 +1,7 @@
 # Sparki Backend
 
 - [Sparki Frontend 바로가기](https://github.com/Team-Okebari/Frontend)
+- [App Demo ▶️ Youtube 바로가기](https://youtube.com/shorts/tryKJCuCI2Y)
 
 > **디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 'Sparki'의 백엔드** 레포지토리입니다. </br>
 > Spring Boot, JPA, 다양한 클라우드 서비스를 기반으로 사용자 인증, 콘텐츠 관리, 구독 및 결제 API를 제공합니다.
