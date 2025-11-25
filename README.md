@@ -4,8 +4,39 @@
 
 > **디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 'Sparki'의 백엔드** 레포지토리입니다. </br>
 > Spring Boot, JPA, 다양한 클라우드 서비스를 기반으로 사용자 인증, 콘텐츠 관리, 구독 및 결제 API를 제공합니다.
-
-<img width="1459" height="628" alt="스크린샷 2025-11-25 오후 12 01 10" src="https://github.com/user-attachments/assets/2b7b6895-a6a7-42e3-a3cd-b0851210d6c7" />
+<img width="1920" height="1080" alt="1" src="https://github.com/user-attachments/assets/d30d886e-2797-4bed-94fe-5416f56e636f" />
+<img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/48d0ff48-f89b-448d-bcbe-ca47a25bee87" />
+<img width="1920" height="1080" alt="3" src="https://github.com/user-attachments/assets/d0cfec05-eb15-44a6-8937-0856803973e0" />
+<img width="1920" height="1080" alt="4" src="https://github.com/user-attachments/assets/a29e9f02-0166-45a1-bca7-7e0d36a43720" />
+<img width="1920" height="1080" alt="5" src="https://github.com/user-attachments/assets/b0dcd8db-2c16-43d1-82ba-072f6f526fd8" />
+<img width="1920" height="1080" alt="6" src="https://github.com/user-attachments/assets/b426fad1-a8a9-49b7-b5ca-b4791342c5df" />
+<img width="1920" height="1080" alt="7" src="https://github.com/user-attachments/assets/ed280cfa-ceb6-4a7d-8706-92191a75760e" />
+<img width="1920" height="1080" alt="8" src="https://github.com/user-attachments/assets/3ad31aa4-c016-4bcf-9c70-986c51d4dfa9" />
+<img width="1920" height="1080" alt="9" src="https://github.com/user-attachments/assets/5b630d0a-c1e6-4d72-afd3-0b1ce96ee899" />
+<img width="1920" height="1080" alt="10" src="https://github.com/user-attachments/assets/4e1aa097-484d-41c0-ad8a-a0c626625f3b" />
+<img width="1920" height="1080" alt="11" src="https://github.com/user-attachments/assets/1c2ecb58-7e70-4721-bf20-0025aeaae75e" />
+<img width="1920" height="1080" alt="12" src="https://github.com/user-attachments/assets/243cdfe6-71ac-44b6-bde5-b7c787002b14" />
+<img width="1920" height="1080" alt="13" src="https://github.com/user-attachments/assets/b0d53d89-b761-4bc1-a3cd-fd93760fad2b" />
+<img width="1920" height="1080" alt="14" src="https://github.com/user-attachments/assets/0a75766b-8bdd-4b55-a3d6-318109543b6a" />
+<img width="1920" height="1080" alt="15" src="https://github.com/user-attachments/assets/41d2e7cd-9826-4416-a2ef-49640fcdd79f" />
+<img width="1920" height="1080" alt="16" src="https://github.com/user-attachments/assets/d3295259-7277-43bb-a02e-c69b9bfa0b80" />
+<img width="1920" height="1080" alt="17" src="https://github.com/user-attachments/assets/8b6a9334-d37a-4ac4-9239-9ded66743e83" />
+<img width="1920" height="1080" alt="18" src="https://github.com/user-attachments/assets/06ba89a5-24a0-43b3-8609-242b3ce825fe" />
+<img width="1920" height="1080" alt="19" src="https://github.com/user-attachments/assets/ba239ea5-3dda-47f5-a6a1-19b9ebe6b60d" />
+<img width="1920" height="1080" alt="20" src="https://github.com/user-attachments/assets/4bafe219-80dd-4362-bb40-f3424a80f1d0" />
+<img width="1920" height="1080" alt="21" src="https://github.com/user-attachments/assets/c7b056e1-da0d-42b2-bf28-c2a1f2f7e278" />
+<img width="1920" height="1080" alt="22" src="https://github.com/user-attachments/assets/f34b2072-d8c9-4f27-b486-8ae6ddcc6ee9" />
+<img width="1920" height="1080" alt="23" src="https://github.com/user-attachments/assets/a37ceff2-fb56-4e83-8ce7-63342075fa06" />
+<img width="1920" height="1080" alt="24" src="https://github.com/user-attachments/assets/a3772eb7-b09f-4027-9cfb-e5ba8786a4d6" />
+<img width="1920" height="1080" alt="25" src="https://github.com/user-attachments/assets/05c996a9-5820-4103-b353-54075d50ef68" />
+<img width="1920" height="1080" alt="26" src="https://github.com/user-attachments/assets/9e6a679f-b562-46cd-9d36-cda3a80ca440" />
+<img width="1920" height="1080" alt="27" src="https://github.com/user-attachments/assets/08778bcd-c552-48d8-b616-83dfffd2c3ce" />
+<img width="1920" height="1080" alt="28" src="https://github.com/user-attachments/assets/1b8558b9-e88a-48b5-88e2-19246b7828eb" />
+<img width="1920" height="1080" alt="29" src="https://github.com/user-attachments/assets/594e2d14-d2d5-4505-b4f8-3684f60a4848" />
+<img width="1920" height="1080" alt="30" src="https://github.com/user-attachments/assets/4d711107-0339-4c02-96d0-577405f2ff76" />
+<img width="1920" height="1080" alt="31" src="https://github.com/user-attachments/assets/e8edd416-e4a6-4994-b7fe-ab87ebf32170" />
+<img width="1920" height="1080" alt="32" src="https://github.com/user-attachments/assets/5a0492d4-fd4e-485c-84db-e5c8f063127a" />
+<img width="1920" height="1080" alt="33" src="https://github.com/user-attachments/assets/c9eb9501-78cd-4808-a74b-ee54f3fd351e" />
 
 </br>
 
@@ -126,8 +157,6 @@ artbite-Backend/
   - Toss Payments 연동을 통한 결제 요청/승인/실패 처리, 환불, 스케줄러를 통한 미완료 결제 처리
 - **파일 스토리지**
   - AWS S3를 활용한 이미지 등 파일 저장 및 관리
-
-//TODO: 서비스 주요 화면 스크린샷 또는 기능별 플로우 다이어그램 삽입
 
 </br>
 
