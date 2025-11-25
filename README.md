@@ -5,7 +5,7 @@
 > **디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 'Sparki'의 백엔드** 레포지토리입니다. </br>
 > Spring Boot, JPA, 다양한 클라우드 서비스를 기반으로 사용자 인증, 콘텐츠 관리, 구독 및 결제 API를 제공합니다.
 
-<img width="1082" height="453" alt="architecture diagram" src="https://github.com/user-attachments/assets/9cc19def-20e9-4676-9582-78eb13198b95" />
+<img width="1459" height="628" alt="스크린샷 2025-11-25 오후 12 01 10" src="https://github.com/user-attachments/assets/2b7b6895-a6a7-42e3-a3cd-b0851210d6c7" />
 
 </br>
 
