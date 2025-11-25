@@ -13,6 +13,7 @@
 <img width="1920" height="1080" alt="15" src="https://github.com/user-attachments/assets/41d2e7cd-9826-4416-a2ef-49640fcdd79f" />
 
 </br>
+</br>
 
 ## 1. 프로젝트 개요
 
@@ -29,6 +30,7 @@
 
 <img width="1920" height="1080" alt="30" src="https://github.com/user-attachments/assets/4d711107-0339-4c02-96d0-577405f2ff76" />
 
+</br>
 </br>
 
 ## 2. 기술 스택
@@ -80,6 +82,7 @@
    
 <img width="1920" height="1080" alt="29" src="https://github.com/user-attachments/assets/594e2d14-d2d5-4505-b4f8-3684f60a4848" />
 
+</br>
 </br>
 
 ## 3. 프로젝트 구조
@@ -238,6 +241,7 @@ Artbite 백엔드는 견고한 테스트 전략을 통해 코드 품질과 안�
 <img width="1920" height="1080" alt="23" src="https://github.com/user-attachments/assets/a37ceff2-fb56-4e83-8ce7-63342075fa06" />
 <img width="1920" height="1080" alt="24" src="https://github.com/user-attachments/assets/a3772eb7-b09f-4027-9cfb-e5ba8786a4d6" />
 
+</br>
 </br>
 
 ## 9. 회고
