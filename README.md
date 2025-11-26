@@ -3,7 +3,7 @@
 |||
 |----------|----------|
 | Sparki Frontend | [Sparki Frontend 바로가기](https://github.com/Team-Okebari/Frontend) |
-| Demo (YouTube) | [Demo ▶️ Youtube 바로가기](https://youtube.com/shorts/tryKJCuCI2Y) |
+| 시연 영상 (YouTube) | [시연 영상 ▶️ Youtube 바로가기](https://youtube.com/shorts/tryKJCuCI2Y) |
 | 배포 링크 | [배포 링크 🌐 바로가기](https://www.sparki-today.com/) |
 
 > 디자이너의 인사이트를 위한 영감 및 레퍼런스 관리 플랫폼
