@@ -1,4 +1,4 @@
-# Sparki Backend
+# 디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 Sparki (Backend)
 
 - [Sparki Frontend 바로가기](https://github.com/Team-Okebari/Frontend)
 - [Demo ▶️ Youtube 바로가기](https://youtube.com/shorts/tryKJCuCI2Y)
