@@ -1,11 +1,16 @@
 # 디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 Sparki (Backend)
 
-- [Sparki Frontend 바로가기](https://github.com/Team-Okebari/Frontend)
-- [Demo ▶️ Youtube 바로가기](https://youtube.com/shorts/tryKJCuCI2Y)
-- [배포 링크 🌐 바로가기](https://www.sparki-today.com/)
+| **구분** | **링크** |
+|----------|----------|
+| Sparki Frontend | [Sparki Frontend 바로가기](https://github.com/Team-Okebari/Frontend) |
+| Demo (YouTube) | [Demo ▶️ Youtube 바로가기](https://youtube.com/shorts/tryKJCuCI2Y) |
+| 배포 링크 | [배포 링크 🌐 바로가기](https://www.sparki-today.com/) |
 
-> **디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 'Sparki'의 백엔드** 레포지토리입니다. </br>
-> Spring Boot, JPA, 다양한 클라우드 서비스를 기반으로 사용자 인증, 콘텐츠 관리, 구독 및 결제 API를 제공합니다.
+> 디자이너의 인사이트를 위한 영감 및 레퍼런스 관리 플랫폼
+
+**디자이너를 위한 영감 및 레퍼런스 관리 플랫폼 'Sparki'의 백엔드** 레포지토리입니다. </br>
+Spring Boot, JPA, 다양한 클라우드 서비스를 기반으로 사용자 인증, 콘텐츠 관리, 구독 및 결제 API를 제공합니다.
+
 <img width="1920" height="1080" alt="1" src="https://github.com/user-attachments/assets/60f75e58-1df1-44ce-9a81-4b3c909a53df" />
 <img width="1920" height="1080" alt="11" src="https://github.com/user-attachments/assets/1c2ecb58-7e70-4721-bf20-0025aeaae75e" />
 <img width="1920" height="1080" alt="12" src="https://github.com/user-attachments/assets/243cdfe6-71ac-44b6-bde5-b7c787002b14" />
@@ -20,22 +25,23 @@
 
 이 레포지토리는 디자이너의 창작 활동을 지원하기 위한 영감 및 레퍼런스 관리 플랫폼의 백엔드 시스템으로, 다음과 같은 핵심 기능을 제공합니다.
 
-- **사용자 인증 및 권한**
-  - 로컬 회원가입
-  - JWT 토큰 기반 인증
-  - Google/Kakao/Naver OAuth2 소셜 로그인 연동
-- **콘텐츠 관리 (노트)**
-  - 관리자 전용 어드민 페이지를 통한 노트 콘텐츠 생성, 조회, 수정, 삭제(CRUD) 기능
-- **구독 및 결제**
-  - Toss Payments를 연동한 멤버십 구독 모델, 자동 갱신 및 '스마트 취소'(환불 정책 적용) 기능
-- **동적 콘텐츠 제공**
-  - 사용자의 구독 상태에 따라 노트 콘텐츠를 전체 또는 미리보기로 차등 제공
-- **사용자 참여 기능**
-  - 노트에 대한 질문/답변, 북마크, 개인화된 리마인더(알림) 기능
-- **파일 스토리지**
-  - AWS S3를 활용한 이미지 파일 관리
-- **로깅 및 모니터링**
-  - ELK 스택(개발) 및 AWS OpenSearch(운영)를 활용한 중앙화된 로깅 시스템
+## 팀원 소개 (Backend Roles)
+
+| 이름 | 담당 역할 |
+|------|-----------|
+| 임은택 | 인증/회원관리 (JWT / OAuth2) 구현, Toss Payments 결제 및 멤버십 구현, 인프라 (AWS / CI / CD) 구축 및 운영, QA 및 성능 개선 |
+| 김소연 | REST API 서버, RDBMS (Postgres) 설계 및 구현, Note 로직 (CRUD / 북마크 / 리마인더) 구현, QA 및 전체 모듈 디버깅 |
+
+## 주요 기능/기술 목표
+
+| **카테고리** | **핵심 기능** | **구현 기술 및 목표** |
+|--------------|----------------|-------------------------|
+| **사용자 인증 및 권한** | - 일반 회원가입/로그인<br>- Google/Kakao/Naver OAuth2 소셜 로그인<br>- Refresh Token Rotation 적용 안전한 JWT 인증<br>- 역할 기반 접근 제어 (`@PreAuthorize`) | - Spring Security + JWT 기반 인증 구조<br>- OAuth2 Client 연동 소셜 로그인<br>- BCrypt 비밀번호 암호화<br>- Refresh Token 관리 전략 |
+| **멤버십 관리 / 결제** | - 사용자 멤버십 구독 상태 관리 (활성화, 취소, 재활성화, 정지)<br>- 스마트 취소 (7일 이내, 콘텐츠 미사용 환불)<br>- 스케줄러 기반 멤버십 만료/갱신 처리<br>- Toss Payments 결제 연동 (정기 결제는 MVP에서 제외) | - Toss Payments API 연동 (결제 요청/승인/실패/환불)<br>- 구독 상태 기반 Access Control<br>- 자동 갱신 처리 및 스케줄러 구현 |
+| **작가(Creator) 관리** | - 관리자 전용 작가 정보 CRUD (이름, 약력, 직무, 소셜 링크) | - 관리자 전용 Backoffice 구현<br>- 권한 기반 접근 제어 |
+| **노트 콘텐츠 관리** | - 노트 CRUD (메타데이터, 커버, 개요, 제작 과정, 회고 등 모듈화)<br>- 질문/답변 CRUD<br>- 북마크 토글 및 목록 조회<br>- 리마인더 (상태 머신 기반, 개인화, 캐시 활용)<br>- 구독 상태에 따른 미리보기/전체 콘텐츠 제공 | - 노트 도메인 설계 및 권한 기반 접근 제어<br>- Q&A/북마크/리마인더 도메인 및 API 개발<br>- Personalized Content 제공 로직 구현 |
+| **파일 스토리지** | - 이미지 업로드/조회/삭제 | - AWS S3 업로드/서명 URL/삭제 기능 구현<br>- 이미지 리사이즈/검증 (MVP 제외) |
+| **로깅 및 모니터링** | - 중앙화된 로그 수집/조회 | - 개발 환경: ELK 스택<br>- 운영 환경: AWS OpenSearch 기반 로그 분석 |
 
 
 <img width="1920" height="1080" alt="30" src="https://github.com/user-attachments/assets/4d711107-0339-4c02-96d0-577405f2ff76" />
@@ -43,59 +49,24 @@
 </br>
 </br>
 
-## 2. 기술 스택
+## 기술 스택 (Technical Stack)
 
-### **Backend**
+| **구분** | **기술 스택** | **설명** |
+|----------|---------------|-----------|
+| **Backend** | Java 21, Spring Boot 3.5.6, Spring Security(OAuth2, JWT), Spring Data JPA(Hibernate), Spring Cloud AWS(S3), Spring Cache, Spring Actuator, Flyway | 인증/인가, ORM, 파일 스토리지 연동, 캐싱, 모니터링 등 핵심 백엔드 기능 구성 |
+| **Storage & Cache** | PostgreSQL(AWS RDS), Redis(ElastiCache, SSL), Caffeine | 영속 데이터 저장, 세션/토큰 및 캐시 관리, 로컬 고성능 캐시 제공 |
+| **External Integrations** | AWS S3, Toss Payments API, Google/Kakao/Naver OAuth2 API | 파일 저장, 결제/정기 결제 처리, 소셜 로그인 연동 |
+| **Infra & Deployment** | Docker, Docker Compose, GitHub Actions(CI/CD), EC2 Self-Hosted Runner | 일관된 컨테이너 환경 구성 및 자동화된 배포 파이프라인 구축 |
+| **Logging & Monitoring** | ELK Stack, Fluent Bit + AWS OpenSearch | 개발·운영 환경에 따른 중앙화 로깅 및 모니터링 |
+| **Dev & Test Tools** | Gradle, Lombok, Jackson, Testcontainers, JUnit5, Mockito, Checkstyle(Naver), SpringDoc(Swagger UI) | 개발 생산성 향상, 테스트 자동화, API 문서화 지원 |
 
-- Java 21
-- Spring Boot 3.5.6
-    - Spring Security (OAuth 2.0, JWT)
-    - Spring Data JPA (Hibernate)
-    - Spring Cloud AWS (S3 연동)
-    - Spring Cache
-    - Spring Actuator
-- JPA / Hibernate
-- Flyway (DB Migration)
-
-### **Storage & Cache**
-
-- PostgreSQL (AWS RDS - 운영, Docker - 개발)
-- Redis (AWS ElastiCache, SSL - 운영, Docker - 개발)
-- Caffeine
-
-### **External Integrations**
-
-- AWS S3 (이미지 등 파일 저장)
-- Toss Payments API
-- Google/Kakao/Naver OAuth2 API
-
-### **Infrastructure / Deployment**
-
-- Docker & Docker Compose
-- GitHub Actions (CI/CD)
-- Self-Hosted Runner on EC2 (CD)
-
-### **Logging & Monitoring**
-
-- ELK Stack (Elasticsearch, Logstash, Kibana, Filebeat) - 개발
-- Fluent Bit + AWS OpenSearch - 운영
-
-### **Development & Testing Tools**
-
-- Gradle
-- Lombok
-- Jackson
-- Testcontainers
-- JUnit 5 & Mockito
-- Checkstyle (Naver)
-- SpringDoc (Swagger UI)
    
 <img width="1920" height="1080" alt="29" src="https://github.com/user-attachments/assets/594e2d14-d2d5-4505-b4f8-3684f60a4848" />
 
 </br>
 </br>
 
-## 3. 프로젝트 구조
+## 프로젝트 구조
 
 ```
 artbite-Backend/
@@ -126,65 +97,50 @@ artbite-Backend/
 
 </br>
 
-## 4. 주요 기능
-
-- **사용자 인증 및 권한**
-  - 일반 회원가입/로그인
-  - Google/Kakao/Naver OAuth2 소셜 로그인
-  - Refresh Token Rotation을 적용한 안전한 JWT 인증
-  - 역할 기반 접근 제어 (`@PreAuthorize`)
-- **멤버십 관리**
-  - 사용자 멤버십 구독 상태 관리 (활성화, 취소, 재활성화, 금지)
-  - 환불 정책 (7일 이내, 콘텐츠 미사용)이 적용된 '스마트 취소'
-  - 스케줄러를 통한 멤버십 만료/갱신 처리
-- **작가(Creator) 관리**
-  - 관리자 전용 작가 정보 (이름, 약력, 직무, 소셜 링크) CRUD 기능
-- **노트 콘텐츠 관리**
-    - **노트 CRUD**: 관리자 전용 노트 (메타데이터, 커버, 개요, 제작 과정, 회고 등 모듈화된 구조) 생성/조회/수정/삭제
-    - **질문 및 답변**: 노트별 질문에 대한 사용자 답변 생성/수정/삭제/조회
-    - **북마크**: 사용자별 노트 북마크 토글 및 목록 조회 (키워드 검색 지원)
-    - **리마인더**: 상태 머신 기반의 개인화된 일일 노트 리마인더 (캐시 활용)
-    - **동적 콘텐츠 제공**: 사용자의 구독 상태에 따라 노트 콘텐츠를 전체 또는 미리보기로 차등 제공
-- **결제 시스템**
-  - Toss Payments 연동을 통한 결제 요청/승인/실패 처리, 환불, 스케줄러를 통한 미완료 결제 처리
-- **파일 스토리지**
-  - AWS S3를 활용한 이미지 등 파일 저장 및 관리
-
-</br>
-
-## 5. API 엔드포인트
+## API 엔드포인트
 
 (주요 엔드포인트 목록이며, 전체 목록은 `http://{}/swagger-ui/index.html` 에서 확인 가능)
 
-### 클라이언트 API (`/api`)
+### 클라이언트 API
 
-- `POST /api/auth/signup`: 회원가입
-- `POST /api/auth/login`: 로그인 (Access Token 발급)
-- `POST /api/auth/reissue`: Access Token 재발급
-- `POST /api/auth/logout`: 로그아웃
-- `GET /api/notes/published/today-cover`: 금일 노트 커버 조회 (공개)
-- `GET /api/notes/published/today-preview`: 금일 노트 미리보기 (로그인 사용자)
-- `GET /api/notes/published/today-detail`: 금일 노트 상세 조회 (멤버십 구독자)
-- `GET /api/notes/archived`: 지난 노트 목록 조회 (로그인 사용자)
-- `GET /api/notes/archived/{noteId}`: 지난 노트 상세 조회 (멤버십 구독자)
-- `POST /api/notes/{noteId}/bookmark`: 노트 북마크 토글
-- `GET /api/notes/bookmarks`: 내 북마크 목록 조회
-- `POST /api/notes/questions/{questionId}/answer`: 질문에 답변하기
-- `GET /api/memberships/status`: 내 멤버십 상태 조회
-- `POST /api/memberships/cancel`: 멤버십 취소 (환불 또는 구독 해지)
+| **Resource** | **Method** | **URI (엔드포인트)** | **설명** | **권한** |
+|--------------|------------|---------------------|----------|----------------|
+| 인증 | POST | /api/auth/signup | 회원가입 | 공개 |
+| | POST | /api/auth/login | 로그인 (Access Token 발급) | 공개 |
+| | POST | /api/auth/reissue | Access Token 재발급 | 로그인 필요 |
+| | POST | /api/auth/logout | 로그아웃 | 로그인 필요 |
+| 노트 | GET | /api/notes/published/today-cover | 금일 노트 커버 조회 | 공개 |
+| | GET | /api/notes/published/today-preview | 금일 노트 미리보기 | 로그인 필요 |
+| | GET | /api/notes/published/today-detail | 금일 노트 상세 조회 | 멤버십 구독자 |
+| | GET | /api/notes/archived | 지난 노트 목록 조회 | 로그인 필요 |
+| | GET | /api/notes/archived/{noteId} | 지난 노트 상세 조회 | 멤버십 구독자 |
+| 북마크 | POST | /api/notes/{noteId}/bookmark | 노트 북마크 토글 | 로그인 필요 |
+| | GET | /api/notes/bookmarks | 내 북마크 목록 조회 | 로그인 필요 |
+| 질문/답변 | POST | /api/notes/questions/{questionId}/answer | 질문에 답변하기 | 로그인 필요 |
+| 멤버십 | GET | /api/memberships/status | 내 멤버십 상태 조회 | 로그인 필요 |
+| | POST | /api/memberships/cancel | 멤버십 취소 (환불 또는 구독 해지) | 로그인 필요 |
 
-### 관리자 API (`/api/admin`)
+---
 
-- `POST /api/admin/creators`: 작가 생성
-- `GET, PUT, DELETE /api/admin/creators/{creatorId}`: 작가 조회, 수정, 삭제
-- `POST /api/admin/notes`: 노트 생성
-- `GET, PUT, DELETE /api/admin/notes/{noteId}`: 노트 조회, 수정, 삭제
-- `PUT /api/admin/membership-inducement-image`: 멤버십 유도 이미지 변경
-- `POST /api/memberships/{userId}/ban`: 특정 사용자 멤버십 정지
+### 관리자 API
+
+| **Resource** | **Method** | **URI (엔드포인트)** | **설명** | **권한** |
+|--------------|------------|---------------------|----------|----------------|
+| 작가 관리 | POST | /api/admin/creators | 작가 생성 | 관리자 |
+| | GET | /api/admin/creators/{creatorId} | 작가 조회 | 관리자 |
+| | PUT | /api/admin/creators/{creatorId} | 작가 수정 | 관리자 |
+| | DELETE | /api/admin/creators/{creatorId} | 작가 삭제 | 관리자 |
+| 노트 관리 | POST | /api/admin/notes | 노트 생성 | 관리자 |
+| | GET | /api/admin/notes/{noteId} | 노트 조회 | 관리자 |
+| | PUT | /api/admin/notes/{noteId} | 노트 수정 | 관리자 |
+| | DELETE | /api/admin/notes/{noteId} | 노트 삭제 | 관리자 |
+| 멤버십 관리 | PUT | /api/admin/membership-inducement-image | 멤버십 유도 이미지 변경 | 관리자 |
+| | POST | /api/memberships/{userId}/ban | 특정 사용자 멤버십 정지 | 관리자 |
+
 
 </br>
 
-## 6. 시작하기
+## 시작하기
 
 ### 1. 필수 도구 설치
 
@@ -232,7 +188,7 @@ PostgreSQL, Redis, ELK Stack 및 Spring Boot 애플리케이션 컨테이너를 
 
 </br>
 
-## 7. 테스트 전략
+## 테스트 전략
 
 Artbite 백엔드는 견고한 테스트 전략을 통해 코드 품질과 안정성을 확보합니다.
 
@@ -244,7 +200,7 @@ Artbite 백엔드는 견고한 테스트 전략을 통해 코드 품질과 안�
 
 </br>
 
-## 8. UT
+## UT
 
 <img width="1920" height="1080" alt="21" src="https://github.com/user-attachments/assets/c7b056e1-da0d-42b2-bf28-c2a1f2f7e278" />
 <img width="1920" height="1080" alt="22" src="https://github.com/user-attachments/assets/f34b2072-d8c9-4f27-b486-8ae6ddcc6ee9" />
@@ -254,7 +210,7 @@ Artbite 백엔드는 견고한 테스트 전략을 통해 코드 품질과 안�
 </br>
 </br>
 
-## 9. 회고
+## 회고
 
 <img width="1920" height="1080" alt="31" src="https://github.com/user-attachments/assets/e8edd416-e4a6-4994-b7fe-ab87ebf32170" />
 <img width="1920" height="1080" alt="32" src="https://github.com/user-attachments/assets/5a0492d4-fd4e-485c-84db-e5c8f063127a" />
